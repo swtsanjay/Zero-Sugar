@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.database import Base, engine
 from app.routes.messages import router as message_router
 from app.routes.health import router as health_router
+from app.routes.user import router as user_router
 from fastapi.middleware.cors import CORSMiddleware
 
 if engine is not None:
@@ -26,6 +27,7 @@ app.add_middleware(
 
 app.include_router(message_router)
 app.include_router(health_router)
+app.include_router(user_router)
 
 @app.get("/")
 def home():

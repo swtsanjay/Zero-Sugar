@@ -6,9 +6,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models.user import User
 
 
-router = APIRouter()
+router = APIRouter(tags=["User"])
 
-@router.get("/create-account")
+@router.post("/create-account")
 def create_account(data: UserCreate):
     try:
         query = insert(User).values(
