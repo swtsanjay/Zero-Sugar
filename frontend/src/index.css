@@ -78,6 +78,31 @@ button, input { font: inherit; }
 .auth-card .ant-form-item-explain-error { padding-top: 4px; }
 .auth-segment .ant-segmented-item { color: #94a3b8; }
 .auth-segment .ant-segmented-item-selected { color: #f8fafc; background: rgba(255,255,255,.1); box-shadow: none; }
+.registration-steps .ant-steps-item-title { font-size: 12px; }
+.registration-steps .ant-steps-item-icon { background: rgba(255,255,255,.05); }
+.registration-steps .ant-steps-item-icon,
+.registration-steps .ant-steps-item-tail::after {
+  transition: background-color 280ms ease, border-color 280ms ease, color 280ms ease;
+}
+
+.registration-step-viewport { overflow: hidden; }
+.registration-step-track {
+  display: flex;
+  align-items: flex-start;
+  transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
+}
+.registration-step-panel {
+  flex: 0 0 100%;
+  min-width: 0;
+  opacity: .35;
+  transform: scale(.97);
+  transition: opacity 300ms ease, transform 420ms cubic-bezier(.22, 1, .36, 1);
+}
+.registration-step-panel:not([aria-hidden='true']) {
+  opacity: 1;
+  transform: scale(1);
+}
 
 .theme-switcher {
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -128,6 +153,7 @@ button, input { font: inherit; }
 :root[data-theme='light'] .auth-segment { background: rgba(15,23,42,.055) !important; }
 :root[data-theme='light'] .auth-segment .ant-segmented-item { color: #52635b; }
 :root[data-theme='light'] .auth-segment .ant-segmented-item-selected { color: #17211d; background: white; }
+:root[data-theme='light'] .registration-steps .ant-steps-item-icon { background: rgba(255,255,255,.75); }
 :root[data-theme='light'] .theme-switcher { background: rgba(255,255,255,.72); }
 :root[data-theme='light'] .chat-sidebar { border-color: #e2e8f0; background: #f8fafc; }
 :root[data-theme='light'] .chat-content { background: #ffffff; }
@@ -135,4 +161,11 @@ button, input { font: inherit; }
 
 @media (max-width: 639px) {
   .auth-card { border-radius: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registration-step-track,
+  .registration-step-panel { transition: none; }
+  .registration-steps .ant-steps-item-icon,
+  .registration-steps .ant-steps-item-tail::after { transition: none; }
 }

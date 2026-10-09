@@ -8,6 +8,8 @@ type UseCreateAccountFormOptions = {
   onAccountCreated: (email: string) => void
 }
 
+export type CreateAccountField = keyof CreateAccountInput
+
 export function useCreateAccountForm({ onAccountCreated }: UseCreateAccountFormOptions) {
   const [form] = Form.useForm<CreateAccountInput>()
   const [formError, setFormError] = useState<string | null>(null)
@@ -23,6 +25,7 @@ export function useCreateAccountForm({ onAccountCreated }: UseCreateAccountFormO
       messageApi.success('Account created. You can sign in now.')
       form.resetFields()
       onAccountCreated(email)
+      return null
     } catch (error) {
       const apiError = parseApiError(error)
       const fieldNames = ['name', 'email', 'password'] as const
@@ -35,9 +38,17 @@ export function useCreateAccountForm({ onAccountCreated }: UseCreateAccountFormO
 
       if (apiError.code === 'conflict') {
         form.setFields([{ name: 'email', errors: [apiError.message] }])
+        setFormError(apiError.message)
+        return 'email'
       }
 
       setFormError(apiError.message)
+
+      const firstInvalidField = fieldNames.find((name) =>
+        apiError.details.some((item) => item.field?.endsWith(name)),
+      )
+
+      return firstInvalidField ?? null
     }
   }
 
