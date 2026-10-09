@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException, Response
-from app.schemas.user import UserCreate, UserLogin
+from fastapi import APIRouter, Response
+from app.schemas.user import LoginResponse, UserCreate, UserCreateResponse, UserLogin
 from app.repository.user import create, getbyemail
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
 from app.core.responses import ApiResponse, success_response
-from app.schemas.user import UserCreateResponse
+from app.core.exceptions import AuthenticationError
 
 
 router = APIRouter(tags=["User"])
@@ -17,36 +17,30 @@ def create_account(data: UserCreate):
     )
 
 
-@router.post("/login")
+@router.post("/login", response_model=ApiResponse[LoginResponse])
 def login(data: UserLogin, response: Response):
-    try:
-        user = getbyemail(data.email)
-        if user is None:
-            raise HTTPException( status_code=401, detail="Invalid email or password")
-        
-        if verify_password(data.password, user["password_hash"]):
+    user = getbyemail(data.email)
 
-            
-            access_token = create_access_token(str(user["id"]))
-            refresh_token = create_refresh_token(str(user["id"]))
+    if user is None or not verify_password(data.password, user["password_hash"]):
+        raise AuthenticationError()
 
-            response.set_cookie(
-                key="refresh_token",
-                value=refresh_token,
-                httponly=True,
-                secure=False,
-                samesite="lax",
-                max_age=7 * 24 * 60 * 60,
-                path="/refresh",
-            )
+    access_token = create_access_token(str(user["id"]))
+    refresh_token = create_refresh_token(str(user["id"]))
 
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60,
+        path="/refresh",
+    )
 
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-            }
-        else:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    except Exception as e:
-        raise HTTPException(status_code= 500, detail=e)
+    return success_response(
+        data=LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+        ),
+        message="Login successful",
+    )

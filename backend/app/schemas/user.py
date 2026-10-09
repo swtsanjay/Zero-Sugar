@@ -100,7 +100,7 @@ class UserLogin(BaseModel):
     email: str = Field(min_length=5, max_length=100)
     password: str = Field(min_length=8, max_length=100)
 
-
+    @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value):
         if value is None:
@@ -135,11 +135,20 @@ class UserLogin(BaseModel):
             raise ValueError("Invalid email address")
 
         return value.lower()
-    
+
+    @field_validator("password", mode="before")
     @classmethod
     def validate_password(cls, value):
         if value is None:
             raise ValueError("Password is required")
+
+        if not isinstance(value, str):
+            raise ValueError("Password must be a string")
+
+        if not value:
+            raise ValueError("Password cannot be empty")
+
+        return value
 
 
 class UserCreateResponse(BaseModel):
@@ -147,3 +156,8 @@ class UserCreateResponse(BaseModel):
     name: str
     email: str
     is_active: bool
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
