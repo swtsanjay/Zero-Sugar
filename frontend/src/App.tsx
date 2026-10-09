@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from './hooks/useTheme';
 import type { LoginData } from './types/auth';
+import { setAccessToken } from './utils/token-manager';
 import AuthPage, { type AuthMode } from './views/auth/AuthPage';
 import ChatPage from './views/chat/ChatPage';
 
@@ -18,6 +19,7 @@ export default function App() {
 	const navigationState = location.state as AuthNavigationState | null;
 
 	const handleLogin = (data: LoginData) => {
+		setAccessToken(data.access_token);
 		setSession(data);
 		navigate('/chat', { replace: true });
 	};
