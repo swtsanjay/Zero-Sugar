@@ -1,5 +1,6 @@
 import re
 from pydantic import BaseModel, Field, field_validator
+from uuid import UUID
 
 class UserCreate(BaseModel):
     name: str = Field(min_length=3, max_length=50)
@@ -139,4 +140,10 @@ class UserLogin(BaseModel):
     def validate_password(cls, value):
         if value is None:
             raise ValueError("Password is required")
-        
+
+
+class UserCreateResponse(BaseModel):
+    id: UUID
+    name: str
+    email: str
+    is_active: bool

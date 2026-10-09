@@ -3,16 +3,19 @@ from app.schemas.user import UserCreate, UserLogin
 from app.repository.user import create, getbyemail
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
+from app.core.responses import ApiResponse, success_response
+from app.schemas.user import UserCreateResponse
 
 
 router = APIRouter(tags=["User"])
 
-@router.post("/create-account")
+@router.post("/create-account", response_model=ApiResponse[UserCreateResponse], status_code=201)
 def create_account(data: UserCreate):
-    try:
-        return create(data.name, data.email, data.password)
-    except Exception:
-        raise HTTPException(status_code= 500, detail="Error")
+    return success_response(
+        data= create(data.name, data.email, data.password),
+        message="Account created successfully"
+    )
+
 
 @router.post("/login")
 def login(data: UserLogin, response: Response):
