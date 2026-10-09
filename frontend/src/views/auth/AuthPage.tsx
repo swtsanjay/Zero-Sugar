@@ -1,6 +1,5 @@
 import { CheckCircleFilled, MessageOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { Segmented, Typography } from 'antd';
-import { useState } from 'react';
 import type { ThemePreference } from '../../hooks/useTheme';
 import type { LoginData } from '../../types/auth';
 import CreateAccountForm from './CreateAccountForm';
@@ -10,22 +9,18 @@ import ThemeSwitcher from '../theme/ThemeSwitcher';
 const { Text, Title } = Typography;
 
 type AuthPageProps = {
+	mode: AuthMode
+	initialEmail?: string
 	onLogin: (data: LoginData) => void
+	onModeChange: (mode: AuthMode) => void
+	onAccountCreated: (email: string) => void
 	themePreference: ThemePreference
 	onThemeChange: (value: ThemePreference) => void
 }
 
-type AuthMode = 'login' | 'create'
+export type AuthMode = 'login' | 'create'
 
-export default function AuthPage({ onLogin, themePreference, onThemeChange }: AuthPageProps) {
-	const [mode, setMode] = useState<AuthMode>('login');
-	const [loginEmail, setLoginEmail] = useState('');
-
-	const handleAccountCreated = (email: string) => {
-		setLoginEmail(email);
-		setMode('login');
-	};
-
+export default function AuthPage({ mode, initialEmail, onLogin, onModeChange, onAccountCreated, themePreference, onThemeChange }: AuthPageProps) {
 	return (
 		<main className="auth-shell min-h-screen overflow-hidden bg-[#07110e] text-slate-100">
 			<div className="auth-glow auth-glow-one" />
@@ -90,7 +85,7 @@ export default function AuthPage({ onLogin, themePreference, onThemeChange }: Au
 							<Segmented<AuthMode>
 								block
 								value={mode}
-								onChange={setMode}
+								onChange={onModeChange}
 								options={[
 									{ label: 'Sign in', value: 'login' },
 									{ label: 'Create account', value: 'create' },
@@ -108,16 +103,16 @@ export default function AuthPage({ onLogin, themePreference, onThemeChange }: Au
 							</div>
 
 							{mode === 'login' ? (
-								<LoginForm initialEmail={loginEmail} onLogin={onLogin} />
+								<LoginForm initialEmail={initialEmail} onLogin={onLogin} />
 							) : (
-								<CreateAccountForm onAccountCreated={handleAccountCreated} />
+								<CreateAccountForm onAccountCreated={onAccountCreated} />
 							)}
 
 							<p className="mb-0 mt-7 text-center text-sm text-slate-400">
 								{mode === 'login' ? 'New to Zero Sugar?' : 'Already have an account?'}{' '}
 								<button
 									type="button"
-									onClick={() => setMode(mode === 'login' ? 'create' : 'login')}
+									onClick={() => onModeChange(mode === 'login' ? 'create' : 'login')}
 									className="font-semibold text-emerald-300 transition hover:text-emerald-200"
 								>
 									{mode === 'login' ? 'Create an account' : 'Sign in'}
