@@ -1,3 +1,4 @@
+from uuid import UUID
 from app.database import engine
 from sqlalchemy import insert, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,13 +12,21 @@ def create(name: str, email: str, password: str):
         with engine.begin() as connection:
             return connection.execute(query).mappings().one()
 
-    except SQLAlchemyError:
-        raise ValueError(SQLAlchemyError._message)
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)
 
 def getbyemail(email: str):
     try:
         query = select(User.id, User.name, User.email, User.password_hash).where(User.email == email)
         with engine.connect() as connection:
             return connection.execute(query).mappings().one_or_none()
-    except SQLAlchemyError:
-        raise ValueError(SQLAlchemyError._message)
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)
+
+def getbyid(id: UUID):
+    try:
+        query = select(User.id, User.name, User.email, User.is_active).where(User.email == id)
+        with engine.connect() as connection:
+            return connection.execute(query).mappings().one_or_none()
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)

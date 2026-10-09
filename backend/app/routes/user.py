@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Response
-from app.schemas.user import LoginResponse, UserCreate, UserCreateResponse, UserLogin
-from app.repository.user import create, getbyemail
+from uuid import UUID
+from fastapi import APIRouter, Response, Depends
+from app.schemas.user import LoginResponse, UserCreate, UserCreateResponse, UserLogin, ProfileResponse
+from app.repository.user import create, getbyemail, getbyid
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
 from app.core.responses import ApiResponse, success_response
 from app.core.exceptions import AuthenticationError
+from app.dependencies.auth import verify_token
 
 
-router = APIRouter(tags=["User"])
+router = APIRouter(tags=["User"], prefix="/user")
 
 @router.post("/create-account", response_model=ApiResponse[UserCreateResponse], status_code=201)
 def create_account(data: UserCreate):
@@ -43,4 +45,12 @@ def login(data: UserLogin, response: Response):
             token_type="bearer",
         ),
         message="Login successful",
+    )
+
+
+@router.get("/profile", response_model=ApiResponse[ProfileResponse])
+def get_profile(user_id: UUID = Depends(verify_token),):
+    success_response(
+        data= getbyid(user_id),
+        message="Profile data fetched",
     )

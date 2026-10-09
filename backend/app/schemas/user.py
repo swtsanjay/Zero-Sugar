@@ -152,7 +152,7 @@ class UserLogin(BaseModel):
 
 
 class UserCreateResponse(BaseModel):
-    # id: UUID
+    id: UUID
     name: str
     email: str
     is_active: bool
@@ -161,3 +161,10 @@ class UserCreateResponse(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
+
+
+class ProfileResponse(BaseModel):
+    id: UUID
+    name: str
+    email: str
+    is_active: bool
