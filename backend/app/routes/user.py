@@ -1,12 +1,13 @@
 from uuid import UUID
-from fastapi import APIRouter, Response, Depends
+from typing import Optional
+from fastapi import APIRouter, Cookie, Response, Depends
 from app.schemas.user import LoginResponse, UserCreate, UserCreateResponse, UserLogin, ProfileResponse
 from app.repository.user import create, getbyemail, getbyid
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
 from app.core.responses import ApiResponse, success_response
 from app.core.exceptions import AuthenticationError
-from app.dependencies.auth import verify_token
+from app.dependencies.auth import verify_refresh_token, verify_token
 
 
 router = APIRouter(tags=["User"], prefix="/user")
@@ -36,7 +37,7 @@ def login(data: UserLogin, response: Response):
         secure=False,
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
-        path="/refresh",
+        path="/user/refresh",
     )
 
     return success_response(
@@ -48,9 +49,33 @@ def login(data: UserLogin, response: Response):
     )
 
 
+@router.post("/refresh", response_model=ApiResponse[LoginResponse])
+def refresh_access_token(
+    refresh_token: Optional[str] = Cookie(default=None),
+):
+    if refresh_token is None:
+        raise AuthenticationError("Refresh token is missing")
+
+    user_id = verify_refresh_token(refresh_token)
+    user = getbyid(user_id)
+
+    if user is None or not user["is_active"]:
+        raise AuthenticationError("User account is unavailable")
+
+    access_token = create_access_token(str(user_id))
+
+    return success_response(
+        data=LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+        ),
+        message="Access token refreshed",
+    )
+
+
 @router.get("/profile", response_model=ApiResponse[ProfileResponse])
 def get_profile(user_id: UUID = Depends(verify_token),):
-    success_response(
+    return success_response(
         data= getbyid(user_id),
         message="Profile data fetched",
     )

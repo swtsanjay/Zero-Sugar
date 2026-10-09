@@ -25,7 +25,7 @@ def getbyemail(email: str):
 
 def getbyid(id: UUID):
     try:
-        query = select(User.id, User.name, User.email, User.is_active).where(User.email == id)
+        query = select(User.id, User.name, User.email, User.is_active).where(User.id == id)
         with engine.connect() as connection:
             return connection.execute(query).mappings().one_or_none()
     except SQLAlchemyError as e:

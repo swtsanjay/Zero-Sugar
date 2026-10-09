@@ -1,6 +1,7 @@
-import { ConfigProvider, theme } from 'antd';
-import { useState } from 'react';
+import { ConfigProvider, Spin, theme } from 'antd';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useRefreshSession } from './hooks/api/useAuth';
 import { useTheme } from './hooks/useTheme';
 import type { LoginData } from './types/auth';
 import { setAccessToken } from './utils/token-manager';
@@ -12,11 +13,32 @@ type AuthNavigationState = {
 }
 
 export default function App() {
-	const [session, setSession] = useState<LoginData | null>(null);
+	const [session, setSession] = useState<LoginData | null | undefined>(undefined);
 	const { preference, resolvedTheme, setPreference } = useTheme();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const navigationState = location.state as AuthNavigationState | null;
+	const refreshSession = useRefreshSession();
+
+	useEffect(() => {
+		if (refreshSession.isSuccess) {
+			setSession(refreshSession.data.data);
+		}
+
+		if (refreshSession.isError) {
+			setSession(null);
+		}
+	}, [refreshSession.data, refreshSession.isError, refreshSession.isSuccess]);
+
+	useEffect(() => {
+		const handleExpiredSession = () => {
+			setSession(null);
+			navigate('/login', { replace: true });
+		};
+
+		window.addEventListener('auth:expired', handleExpiredSession);
+		return () => window.removeEventListener('auth:expired', handleExpiredSession);
+	}, [navigate]);
 
 	const handleLogin = (data: LoginData) => {
 		setAccessToken(data.access_token);
@@ -49,6 +71,8 @@ export default function App() {
 		/>
 	);
 
+	const isRestoringSession = session === undefined;
+
 	return (
 		<ConfigProvider
 			theme={{
@@ -60,7 +84,11 @@ export default function App() {
 				},
 			}}
 		>
-			<Routes>
+			{isRestoringSession ? (
+				<div className="grid min-h-screen place-items-center">
+					<Spin size="large" tip="Restoring your session" />
+				</div>
+			) : <Routes>
 				<Route path="/" element={<Navigate to={session ? '/chat' : '/login'} replace />} />
 				<Route path="/login" element={renderAuthPage('login')} />
 				<Route path="/create-account" element={renderAuthPage('create')} />
@@ -73,7 +101,7 @@ export default function App() {
 					)}
 				/>
 				<Route path="*" element={<Navigate to={session ? '/chat' : '/login'} replace />} />
-			</Routes>
+			</Routes>}
 		</ConfigProvider>
 	)
 }

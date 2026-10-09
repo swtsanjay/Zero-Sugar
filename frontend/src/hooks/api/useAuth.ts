@@ -1,6 +1,6 @@
-import { useMutation } from '@tanstack/react-query';
-import type { UseMutationOptions } from '@tanstack/react-query';
-import { createAccount, login } from '../../api/auth.api';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
+import { createAccount, login, refreshAccessToken } from '../../api/auth.api';
 import type { ApiResponse } from '../../types/api';
 import type { CreateAccountInput, CreatedUser, LoginData, LoginInput } from '../../types/auth';
 
@@ -36,4 +36,19 @@ export function useCreateAccount(
 		onError: (error) => onError?.(error),
 		...options,
 	})
+}
+
+type RefreshQueryOptions = Omit<
+	UseQueryOptions<ApiResponse<LoginData>, Error>,
+	'queryKey' | 'queryFn'
+>
+
+export function useRefreshSession(options: RefreshQueryOptions = {}) {
+	return useQuery({
+		queryKey: ['auth', 'refresh-session'],
+		queryFn: refreshAccessToken,
+		retry: false,
+		staleTime: Infinity,
+		...options,
+	});
 }

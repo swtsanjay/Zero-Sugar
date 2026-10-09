@@ -5,6 +5,9 @@ import { BrowserRouter } from 'react-router-dom'
 import 'antd/dist/reset.css'
 import './index.css'
 import App from './App'
+import { setupApiInterceptors } from './api/setup-interceptors'
+
+setupApiInterceptors()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },

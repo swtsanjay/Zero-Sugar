@@ -27,3 +27,24 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(bearer_sch
     
     except (InvalidTokenError, ValueError):
         raise AuthenticationError("Invalid access token")
+
+
+def verify_refresh_token(token: str) -> UUID:
+    try:
+        payload = decode_token(token)
+
+        if payload.get("type") != "refresh":
+            raise AuthenticationError("Invalid refresh token")
+
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise AuthenticationError("Invalid refresh token")
+
+        return UUID(user_id)
+
+    except ExpiredSignatureError:
+        raise AuthenticationError("Refresh token has expired")
+
+    except (InvalidTokenError, ValueError):
+        raise AuthenticationError("Invalid refresh token")
