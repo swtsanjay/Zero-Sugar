@@ -76,7 +76,7 @@ def refresh_access_token(
 @router.put("/profile", response_model=ApiResponse[ProfileResponse])
 def update_user_profile(data: UserUpdate, user_id: UUID = Depends(verify_token),):
     return success_response(
-        data= update_profile(user_id, data.name, data.email),
+        data= update_profile(user_id, data.name, data.email, data.username),
         message="Profile updated",
     )
 

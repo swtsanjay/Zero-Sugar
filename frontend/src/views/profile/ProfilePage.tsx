@@ -136,6 +136,21 @@ export default function ProfilePage({ themePreference, onThemeChange }: ProfileP
 											</Form.Item>
 
 											<Form.Item
+												name="username"
+												label="Username"
+												normalize={(value: string) => value?.trim().toLowerCase()}
+												extra="Use letters, numbers and underscores."
+												rules={[
+													{ required: true, message: 'Please choose a username' },
+													{ min: 3, message: 'Username must be at least 3 characters' },
+													{ max: 30, message: 'Username cannot exceed 30 characters' },
+													{ pattern: /^[a-z0-9_]+$/, message: 'Use only letters, numbers and underscores' },
+												]}
+											>
+												<Input prefix={<UserOutlined />} autoComplete="username" placeholder="Choose a username" />
+											</Form.Item>
+
+											<Form.Item
 												name="email"
 												label="Email address"
 												normalize={(value: string) => value?.trim()}
@@ -162,6 +177,16 @@ export default function ProfilePage({ themePreference, onThemeChange }: ProfileP
 
 							<div className="mt-8 grid gap-4 sm:grid-cols-2">
 								<div className="profile-detail">
+									<div className="profile-detail-icon"><UserOutlined /></div>
+									<div className="min-w-0">
+										<Text type="secondary" className="!text-xs !uppercase !tracking-wider">Username</Text>
+										<p className="mb-0 mt-1 truncate font-medium">
+											{profile.data.username ? `@${profile.data.username}` : 'Not set yet'}
+										</p>
+									</div>
+								</div>
+
+								<div className="profile-detail">
 									<div className="profile-detail-icon"><MailOutlined /></div>
 									<div className="min-w-0">
 										<Text type="secondary" className="!text-xs !uppercase !tracking-wider">Email address</Text>
@@ -169,13 +194,13 @@ export default function ProfilePage({ themePreference, onThemeChange }: ProfileP
 									</div>
 								</div>
 
-								<div className="profile-detail">
+								{/* <div className="profile-detail">
 									<div className="profile-detail-icon"><IdcardOutlined /></div>
 									<div className="min-w-0">
 										<Text type="secondary" className="!text-xs !uppercase !tracking-wider">User ID</Text>
 										<p className="mb-0 mt-1 truncate font-mono text-sm">{profile.data.id}</p>
 									</div>
-								</div>
+								</div> */}
 							</div>
 						</div>
 					</Card>

@@ -11,7 +11,7 @@ function applyFieldErrors(
 ) {
 	const fields = details.flatMap((detail) => {
 		const field = detail.field?.split('.').pop();
-		if (field !== 'name' && field !== 'email') return [];
+		if (field !== 'name' && field !== 'username' && field !== 'email') return [];
 		return [{ name: field as keyof UpdateProfileInput, errors: [detail.message] }];
 	});
 
@@ -27,20 +27,37 @@ export function useProfileForm(profile?: UserProfile | null) {
 
 	useEffect(() => {
 		if (profile) {
-			form.setFieldsValue({ name: profile.name, email: profile.email });
+			form.setFieldsValue({
+				name: profile.name,
+				username: profile.username ?? '',
+				email: profile.email,
+			});
 		}
 	}, [form, profile]);
 
 	const startEditing = () => {
-		if (profile) form.setFieldsValue({ name: profile.name, email: profile.email });
+		if (profile) {
+			form.setFieldsValue({
+				name: profile.name,
+				username: profile.username ?? '',
+				email: profile.email,
+			});
+		}
 		setFormError(null);
 		setIsEditing(true);
 	};
 
 	const cancelEditing = () => {
-		if (profile) form.setFieldsValue({ name: profile.name, email: profile.email });
+		if (profile) {
+			form.setFieldsValue({
+				name: profile.name,
+				username: profile.username ?? '',
+				email: profile.email,
+			});
+		}
 		form.setFields([
 			{ name: 'name', errors: [] },
+			{ name: 'username', errors: [] },
 			{ name: 'email', errors: [] },
 		]);
 		setFormError(null);
@@ -59,7 +76,10 @@ export function useProfileForm(profile?: UserProfile | null) {
 			applyFieldErrors(form, apiError.details);
 
 			if (apiError.code === 'conflict') {
-				form.setFields([{ name: 'email', errors: [apiError.message] }]);
+				const conflictField = apiError.message.toLowerCase().includes('username')
+					? 'username'
+					: 'email';
+				form.setFields([{ name: conflictField, errors: [apiError.message] }]);
 			}
 
 			setFormError(apiError.message);

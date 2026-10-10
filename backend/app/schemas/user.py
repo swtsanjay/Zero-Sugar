@@ -1,6 +1,7 @@
 import re
 from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
+from typing import Optional
 
 class UserCreate(BaseModel):
     name: str = Field(min_length=3, max_length=50)
@@ -99,6 +100,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: str = Field(min_length=3, max_length=50)
     email: str = Field(min_length=5, max_length=100)
+    username: str = Field(min_length=3, max_length=30)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -146,10 +148,27 @@ class UserUpdate(BaseModel):
 
         return value.lower()
 
+    @field_validator("username", mode="before")
+    @classmethod
+    def validate_username(cls, value):
+        if value is None:
+            raise ValueError("Username is required")
 
+        if not isinstance(value, str):
+            raise ValueError("Username must be a string")
+
+        value = value.strip().lower()
+
+        if not value:
+            raise ValueError("Username cannot be empty")
+
+        if not re.fullmatch(r"[a-z0-9_]+", value):
+            raise ValueError(
+                "Username can only contain letters, numbers, and underscores"
+            )
+
+        return value
     
-
-
 class UserLogin(BaseModel):
     email: str = Field(min_length=5, max_length=100)
     password: str = Field(min_length=8, max_length=100)
@@ -220,5 +239,6 @@ class LoginResponse(BaseModel):
 class ProfileResponse(BaseModel):
     id: UUID
     name: str
+    username: Optional[str] = None
     email: str
     is_active: bool
