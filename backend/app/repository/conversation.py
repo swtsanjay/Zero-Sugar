@@ -4,16 +4,22 @@ from typing import Optional
 from uuid import UUID
 from app.database import engine
 from sqlalchemy import insert, select, update, delete
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.conversation import ConversationTable
-from app.core.db import paginate
+from app.core.db import paginate, transaction_scope
 
 
-def create(user_id: UUID, title: str, model: str):
+def create(
+    user_id: UUID,
+    title: str,
+    model: str,
+    connection: Optional[Connection] = None,
+):
     try:
         query = insert(ConversationTable).values(user_id = user_id, title = title, model = model).returning(ConversationTable)
-        with engine.begin() as connection:
-            return connection.execute(query).mappings().one()
+        with transaction_scope(connection) as active_connection:
+            return active_connection.execute(query).mappings().one()
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)

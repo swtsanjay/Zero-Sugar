@@ -4,9 +4,10 @@ from typing import Optional
 from uuid import UUID
 from app.database import engine
 from sqlalchemy import insert, select, update, delete, func
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.message import MessageTable
-from app.core.db import paginate
+from app.core.db import paginate, transaction_scope
 
 
 def create(
@@ -14,11 +15,12 @@ def create(
         role: str, 
         content: str, 
         model: str, 
-        prompt_tokens: int, 
-        completion_tokens: int
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        connection: Optional[Connection] = None
     ):
     try:
-        with engine.begin() as connection:
+        with transaction_scope(connection) as active_connection:
             next_sequence_query = select(
                 func.coalesce(
                     func.max(MessageTable.sequence_number),
@@ -26,7 +28,7 @@ def create(
                 ) + 1
             ).where(MessageTable.conversation_id == conversation_id)
 
-            next_sequence_number = connection.execute(
+            next_sequence_number = active_connection.execute(
                 next_sequence_query
             ).scalar_one()
 
@@ -40,7 +42,7 @@ def create(
                 completion_tokens=completion_tokens,
             ).returning(MessageTable)
 
-            return connection.execute(query).mappings().one()
+            return active_connection.execute(query).mappings().one()
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
@@ -53,7 +55,8 @@ def change(
         sequence_number: int = None, 
         model: str = None, 
         prompt_tokens: int = None, 
-        completion_tokens: int = None 
+        completion_tokens: int = None ,
+        connection: Optional[Connection] = None
     ):
     try:
         query = (
@@ -76,13 +79,13 @@ def change(
         if completion_tokens is not None:
             query = query.values(completion_tokens = completion_tokens)
 
-        with engine.begin() as connection:
-            return connection.execute(query).mappings().one_or_none()
+        with transaction_scope(connection) as active_connection:
+            return active_connection.execute(query).mappings().one_or_none()
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def list(conversation_id: UUID = None, page: int = 1, limit: int = 20):
+def list(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection: Optional[Connection] = None):
     try:
         query = (
             select(MessageTable)
@@ -93,11 +96,11 @@ def list(conversation_id: UUID = None, page: int = 1, limit: int = 20):
         if conversation_id is not None:
             query = query.where(MessageTable.conversation_id == conversation_id)
     
-        return paginate(engine, query, {"page": page, "limit": limit})
+        return paginate(engine, query, {"page": page, "limit": limit}, connection)
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def remove(id: Optional[UUID] = None, conversation_id: Optional[UUID] = None) -> list[UUID]:
+def remove(id: Optional[UUID] = None, conversation_id: Optional[UUID] = None, connection: Optional[Connection] = None) -> list[UUID]:
     if id is None and conversation_id is None:
         raise ValueError("Either id or conversation_id is required")
 
@@ -110,8 +113,8 @@ def remove(id: Optional[UUID] = None, conversation_id: Optional[UUID] = None) ->
         if conversation_id is not None:
             query = query.where(MessageTable.conversation_id == conversation_id)
 
-        with engine.begin() as connection:
-            return list(connection.execute(query).scalars().all())
+        with transaction_scope(connection) as active_connection:
+            return list(active_connection.execute(query).scalars().all())
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
