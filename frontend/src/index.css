@@ -113,6 +113,9 @@ button, input { font: inherit; }
 .chat-sidebar { border-color: #1e293b; }
 .chat-content { background: #020617; }
 .chat-header { border-color: #1e293b; }
+.conversation-item { color: #cbd5e1; background: transparent; }
+.conversation-item:hover { background: rgba(255,255,255,.05); }
+.conversation-item-active { color: #d1fae5; background: rgba(16,185,129,.13); }
 
 .profile-shell {
   --profile-card-bg: #101916;
@@ -189,6 +192,9 @@ button, input { font: inherit; }
 :root[data-theme='light'] .chat-sidebar { border-color: #e2e8f0; background: #f8fafc; }
 :root[data-theme='light'] .chat-content { background: #ffffff; }
 :root[data-theme='light'] .chat-header { border-color: #e2e8f0; }
+:root[data-theme='light'] .conversation-item { color: #475569; }
+:root[data-theme='light'] .conversation-item:hover { background: rgba(15,23,42,.05); }
+:root[data-theme='light'] .conversation-item-active { color: #047857; background: rgba(16,185,129,.12); }
 :root[data-theme='light'] .profile-shell {
   --profile-card-bg: #ffffff;
   color: #17211d;

@@ -7,6 +7,7 @@ const API_ENDPOINTS = {
 	CHANGE_PASSWORD: '/user/change-password',
 	MESSAGE: '/message',
 	START_CONVERSATION: '/message/start-conversation',
+	CONVERSATION: '/conversation',
 } as const
 
 export default API_ENDPOINTS

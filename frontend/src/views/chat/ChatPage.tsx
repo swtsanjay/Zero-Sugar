@@ -2,6 +2,7 @@ import { MessageOutlined, PlusOutlined, SendOutlined, UserOutlined } from '@ant-
 import { Alert, Button, Input, Layout, Spin, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useHealth } from '../../hooks/api/useHealth';
+import { useConversations } from '../../hooks/api/useConversation';
 import { useCreateMessage } from '../../hooks/api/useMessage';
 import type { ThemePreference } from '../../hooks/useTheme';
 import type { ChatMessage } from '../../types/message';
@@ -19,6 +20,7 @@ type ChatPageProps = {
 
 export default function ChatPage({ themePreference, onThemeChange }: ChatPageProps) {
 	const health = useHealth();
+	const conversations = useConversations();
 	const [content, setContent] = useState('');
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [conversationId, setConversationId] = useState<string | null>(null);
@@ -66,9 +68,34 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 		<Layout className="chat-layout min-h-screen">
 			<Sider breakpoint="md" collapsedWidth="0" width={260} className="chat-sidebar border-r p-4">
 				<Button block icon={<PlusOutlined />} size="large" onClick={startNewChat}>New chat</Button>
-				<div className="mt-8 flex items-center gap-2 px-2 text-slate-400">
+				<div className="mt-8 flex items-center gap-2 px-2 pb-3 text-slate-400">
 					<MessageOutlined />
-					<span>Conversations will appear here</span>
+					<span>Conversations</span>
+				</div>
+
+				<div className="flex max-h-[calc(100vh-9rem)] flex-col gap-1 overflow-y-auto">
+					{conversations.isLoading ? (
+						<div className="flex justify-center py-8"><Spin size="small" /></div>
+					) : conversations.isError ? (
+						<Alert
+							type="error"
+							showIcon
+							message="Couldn't load conversations"
+							action={<Button size="small" onClick={() => conversations.refetch()}>Retry</Button>}
+						/>
+					) : conversations.data?.data.length ? (
+						conversations.data.data.map((conversation) => (
+							<div
+								key={conversation.id}
+								title={conversation.title}
+								className={`conversation-item truncate rounded-lg px-3 py-2 text-sm ${conversation.id === conversationId ? 'conversation-item-active' : ''}`}
+							>
+								{conversation.title}
+							</div>
+						))
+					) : (
+						<Text type="secondary" className="px-2 py-4 text-sm">No conversations yet</Text>
+					)}
 				</div>
 			</Sider>
 
