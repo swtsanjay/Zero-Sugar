@@ -5,6 +5,7 @@ const API_ENDPOINTS = {
 	REFRESH: '/user/refresh',
 	PROFILE: '/user/profile',
 	CHANGE_PASSWORD: '/user/change-password',
+	MESSAGE: '/message',
 } as const
 
 export default API_ENDPOINTS

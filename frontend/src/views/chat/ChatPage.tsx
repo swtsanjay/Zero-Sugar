@@ -1,7 +1,11 @@
 import { MessageOutlined, PlusOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Input, Layout, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Input, Layout, Spin, Tag, Typography } from 'antd';
+import { useState } from 'react';
 import { useHealth } from '../../hooks/api/useHealth';
+import { useCreateMessage } from '../../hooks/api/useMessage';
 import type { ThemePreference } from '../../hooks/useTheme';
+import type { ChatMessage } from '../../types/message';
+import { parseApiError } from '../../utils/api-error';
 import { Link } from 'react-router-dom';
 import ThemeSwitcher from '../theme/ThemeSwitcher';
 
@@ -15,11 +19,42 @@ type ChatPageProps = {
 
 export default function ChatPage({ themePreference, onThemeChange }: ChatPageProps) {
 	const health = useHealth();
+	const [content, setContent] = useState('');
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [conversationId, setConversationId] = useState<string | null>(null);
+	const [sendError, setSendError] = useState<string | null>(null);
+	const createMessage = useCreateMessage({
+		onSuccess: (response) => {
+			setMessages((current) => [...current, response.message]);
+			setConversationId(response.conversation.id);
+			setContent('');
+			setSendError(null);
+		},
+		onError: (error) => {
+			setSendError(parseApiError(error).message);
+		},
+	});
+
+	const submitMessage = () => {
+		const trimmedContent = content.trim();
+
+		if (!trimmedContent || createMessage.isPending) return;
+
+		setSendError(null);
+		createMessage.mutate({ content: trimmedContent });
+	};
+
+	const startNewChat = () => {
+		setMessages([]);
+		setConversationId(null);
+		setContent('');
+		setSendError(null);
+	};
 
 	return (
 		<Layout className="chat-layout min-h-screen">
 			<Sider breakpoint="md" collapsedWidth="0" width={260} className="chat-sidebar border-r p-4">
-				<Button block icon={<PlusOutlined />} size="large">New chat</Button>
+				<Button block icon={<PlusOutlined />} size="large" onClick={startNewChat}>New chat</Button>
 				<div className="mt-8 flex items-center gap-2 px-2 text-slate-400">
 					<MessageOutlined />
 					<span>Conversations will appear here</span>
@@ -42,22 +77,50 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 					</div>
 				</header>
 
-				<main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-					<div className="mb-5 rounded-2xl bg-emerald-500/10 p-4 text-3xl text-emerald-400"><MessageOutlined /></div>
-					<Title level={2}>How can I help you today?</Title>
-					<Text type="secondary" className="max-w-lg">
-						Your React, FastAPI, and PostgreSQL foundation is ready. Ollama chat streaming comes next.
-					</Text>
+				<main className={`flex flex-1 flex-col px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
+					{messages.length === 0 ? (
+						<>
+							<div className="mb-5 rounded-2xl bg-emerald-500/10 p-4 text-3xl text-emerald-400"><MessageOutlined /></div>
+							<Title level={2}>How can I help you today?</Title>
+							<Text type="secondary" className="max-w-lg">
+								Send your first message to begin a conversation.
+							</Text>
+						</>
+					) : (
+						<div className="mx-auto flex w-full max-w-3xl flex-col gap-4" data-conversation-id={conversationId ?? undefined}>
+							{messages.map((message) => (
+								<div key={message.id} className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-emerald-500 px-4 py-3 text-left text-slate-950 shadow-sm">
+									<p className="m-0 whitespace-pre-wrap break-words">{message.content}</p>
+								</div>
+							))}
+						</div>
+					)}
 				</main>
 
-				<footer className="mx-auto w-full max-w-3xl p-6">
+				<footer className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+					{sendError ? <Alert className="mb-3" type="error" showIcon message={sendError} closable onClose={() => setSendError(null)} /> : null}
 					<Input
-						disabled
+						value={content}
+						onChange={(event) => setContent(event.target.value)}
+						onPressEnter={submitMessage}
+						maxLength={500}
+						disabled={createMessage.isPending}
 						size="large"
-						placeholder="Messaging will be enabled in the chat phase"
-						suffix={<Button type="primary" shape="circle" disabled icon={<SendOutlined />} />}
+						placeholder="Message Zero Sugar"
+						suffix={(
+							<Button
+								type="primary"
+								shape="circle"
+								aria-label="Send message"
+								disabled={!content.trim()}
+								loading={createMessage.isPending}
+								onClick={submitMessage}
+								icon={<SendOutlined />}
+							/>
+						)}
 						className="!py-3"
 					/>
+					<Text type="secondary" className="mt-2 block text-center text-xs">Press Enter to send</Text>
 				</footer>
 			</Content>
 		</Layout>

@@ -1,3 +1,7 @@
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
 from pydantic import BaseModel, Field, field_validator
 
 class MessageCreate(BaseModel):
@@ -17,5 +21,29 @@ class MessageCreate(BaseModel):
 
 
 class Message(BaseModel):
-    id: int
+    id: UUID
+    conversation_id: UUID
+    role: str
     content: str
+    sequence_number: int
+    status: str
+    model: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class Conversation(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    model: str
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime] = None
+
+
+class MessageCreateResponse(BaseModel):
+    conversation: Conversation
+    message: Message

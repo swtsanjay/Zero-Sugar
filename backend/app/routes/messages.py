@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, insert, select, update
 from app.models.message import MessageTable
-from app.schemas.message import MessageCreate, Message
+from app.schemas.message import MessageCreate, Message, MessageCreateResponse
 from app.database import engine
 from app.repository.message import create
 from app.repository.conversation import create as conversation_create
@@ -47,15 +47,15 @@ def get_message(id: int):
         raise HTTPException(status_code=404, detail="Message not found")
     return message
 
-@router.post('', response_model=Message, status_code=201)
-def create_message(data: MessageCreate):
+@router.post('', response_model=MessageCreateResponse, status_code=201)
+def create_message(data: MessageCreate, user_id: CurrentUserId):
     conversation_data=conversation_create(
-        user_id=CurrentUserId,
-        title=data.content,
+        user_id=user_id,
+        title=data.content[:200],
         model="qwen3:14b"
     )
     message=create(
-        conversation_id= conversation_data.id,
+        conversation_id=conversation_data["id"],
         role="user",
         content=data.content,
         model="qwen3:14b",
