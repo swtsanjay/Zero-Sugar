@@ -7,6 +7,7 @@ import type { LoginData } from './types/auth';
 import { setAccessToken } from './utils/token-manager';
 import AuthPage, { type AuthMode } from './views/auth/AuthPage';
 import ChatPage from './views/chat/ChatPage';
+import AppLayout from './views/layout/AppLayout';
 import ProfilePage from './views/profile/ProfilePage';
 
 type AuthNavigationState = {
@@ -93,30 +94,17 @@ export default function App() {
 				<Route path="/" element={<Navigate to={session ? '/chat' : '/login'} replace />} />
 				<Route path="/login" element={renderAuthPage('login')} />
 				<Route path="/create-account" element={renderAuthPage('create')} />
-					<Route
-						path="/chat"
-					element={session ? (
-						<ChatPage themePreference={preference} onThemeChange={setPreference} />
-					) : (
-						<Navigate to="/login" replace />
-					)}
-					/>
-					<Route
-						path="/chat/:conversationId"
-						element={session ? (
-							<ChatPage themePreference={preference} onThemeChange={setPreference} />
-						) : (
-							<Navigate to="/login" replace />
-						)}
-					/>
 				<Route
-					path="/profile"
 					element={session ? (
-						<ProfilePage themePreference={preference} onThemeChange={setPreference} />
+						<AppLayout themePreference={preference} onThemeChange={setPreference} />
 					) : (
 						<Navigate to="/login" replace />
 					)}
-				/>
+				>
+					<Route path="/chat" element={<ChatPage />} />
+					<Route path="/chat/:conversationId" element={<ChatPage />} />
+					<Route path="/profile" element={<ProfilePage />} />
+				</Route>
 				<Route path="*" element={<Navigate to={session ? '/chat' : '/login'} replace />} />
 			</Routes>}
 		</ConfigProvider>

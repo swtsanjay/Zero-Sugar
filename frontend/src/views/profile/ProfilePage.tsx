@@ -13,16 +13,9 @@ import { Alert, Avatar, Button, Card, Form, Input, Skeleton, Tag, Typography } f
 import { Link } from 'react-router-dom';
 import { useProfile } from '../../hooks/api/useProfile';
 import { useProfileForm } from '../../hooks/useProfileForm';
-import type { ThemePreference } from '../../hooks/useTheme';
-import ThemeSwitcher from '../theme/ThemeSwitcher';
 import ChangePasswordForm from './ChangePasswordForm';
 
 const { Text, Title } = Typography;
-
-type ProfilePageProps = {
-	themePreference: ThemePreference
-	onThemeChange: (value: ThemePreference) => void
-}
 
 function getInitials(name: string) {
 	return name
@@ -33,19 +26,18 @@ function getInitials(name: string) {
 		.join('');
 }
 
-export default function ProfilePage({ themePreference, onThemeChange }: ProfilePageProps) {
+export default function ProfilePage() {
 	const profile = useProfile();
 	const profileForm = useProfileForm(profile.data);
 
 	return (
-		<main className="profile-shell min-h-screen px-4 py-6 sm:px-8 sm:py-10">
+		<main className="profile-shell min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-8 sm:py-10">
 			{profileForm.messageContext}
 			<div className="mx-auto max-w-4xl">
-				<header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+				<header className="mb-8 flex flex-wrap items-center gap-4">
 					<Link to="/chat">
 						<Button icon={<ArrowLeftOutlined />}>Back to chat</Button>
 					</Link>
-					<ThemeSwitcher value={themePreference} onChange={onThemeChange} />
 				</header>
 
 				<div className="mb-8">
