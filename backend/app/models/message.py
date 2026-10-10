@@ -32,7 +32,7 @@ class MessageTable(Base):
     role: Mapped[str] = mapped_column( String(20), nullable=False )
     content: Mapped[str] = mapped_column( Text, nullable=False )
     sequence_number: Mapped[int] = mapped_column( Integer, nullable=False )
-    status: Mapped[str] = mapped_column( String(20), nullable=False, default="completed" )
+    status: Mapped[str] = mapped_column( String(20), nullable=False, default="pending" )
     model: Mapped[Optional[str]] = mapped_column( String(100), nullable=True )
     prompt_tokens: Mapped[Optional[int]] = mapped_column( Integer, nullable=True )
     completion_tokens: Mapped[Optional[int]] = mapped_column( Integer, nullable=True )
