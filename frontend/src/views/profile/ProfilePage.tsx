@@ -15,6 +15,7 @@ import { useProfile } from '../../hooks/api/useProfile';
 import { useProfileForm } from '../../hooks/useProfileForm';
 import type { ThemePreference } from '../../hooks/useTheme';
 import ThemeSwitcher from '../theme/ThemeSwitcher';
+import ChangePasswordForm from './ChangePasswordForm';
 
 const { Text, Title } = Typography;
 
@@ -70,6 +71,7 @@ export default function ProfilePage({ themePreference, onThemeChange }: ProfileP
 				)}
 
 				{profile.data && (
+					<>
 					<Card className="profile-card overflow-hidden !rounded-3xl">
 						<div className="profile-banner -mx-6 -mt-6 mb-0 h-28 sm:-mx-6" />
 						<div className="relative px-1 pb-2 sm:px-4">
@@ -204,6 +206,8 @@ export default function ProfilePage({ themePreference, onThemeChange }: ProfileP
 							</div>
 						</div>
 					</Card>
+					<ChangePasswordForm />
+					</>
 				)}
 			</div>
 		</main>

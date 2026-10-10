@@ -1,12 +1,12 @@
 from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Cookie, Response, Depends
-from app.schemas.user import LoginResponse, UserCreate, UserUpdate, UserCreateResponse, UserLogin, ProfileResponse
-from app.repository.user import create, getbyemail, getbyid, update_profile
+from app.schemas.user import LoginResponse, PasswordChange, UserCreate, UserUpdate, UserCreateResponse, UserLogin, ProfileResponse
+from app.repository.user import create, get_password_by_id, getbyemail, getbyid, update_password, update_profile
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
 from app.core.responses import ApiResponse, success_response
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AuthenticationError, BadRequestError, NotFoundError
 from app.dependencies.auth import verify_refresh_token, verify_token
 
 
@@ -86,4 +86,30 @@ def get_profile(user_id: UUID = Depends(verify_token),):
     return success_response(
         data= getbyid(user_id),
         message="Profile data fetched",
+    )
+
+
+@router.put("/change-password", response_model=ApiResponse[None])
+def change_password(data: PasswordChange, user_id: UUID = Depends(verify_token)):
+    user = get_password_by_id(user_id)
+
+    if user is None:
+        raise NotFoundError("User not found")
+
+    if not verify_password(data.current_password, user["password_hash"]):
+        raise BadRequestError(
+            message="Current password is incorrect",
+            code="invalid_current_password",
+        )
+
+    if verify_password(data.new_password, user["password_hash"]):
+        raise BadRequestError(
+            message="New password must be different from the current password",
+            code="password_unchanged",
+        )
+
+    update_password(user_id, data.new_password)
+
+    return success_response(
+        message="Password changed successfully",
     )

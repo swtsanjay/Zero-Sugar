@@ -29,6 +29,15 @@ class ConflictError(AppError):
         )
 
 
+class BadRequestError(AppError):
+    def __init__( self, message: str = "Invalid request", code: str = "bad_request" ):
+        super().__init__(
+            message=message,
+            status_code=400,
+            code=code,
+        )
+
+
 class AuthenticationError(AppError):
     def __init__( self, message: str = "Invalid email or password" ):
         super().__init__(

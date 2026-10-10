@@ -67,3 +67,26 @@ def getbyid(id: UUID):
             return connection.execute(query).mappings().one_or_none()
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
+
+
+def get_password_by_id(id: UUID):
+    try:
+        query = select(User.id, User.password_hash).where(User.id == id)
+        with engine.connect() as connection:
+            return connection.execute(query).mappings().one_or_none()
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)
+
+
+def update_password(id: UUID, password: str):
+    try:
+        query = (
+            update(User)
+            .where(User.id == id)
+            .values(password_hash=hash_password(password))
+            .returning(User.id)
+        )
+        with engine.begin() as connection:
+            return connection.execute(query).scalar_one_or_none()
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)

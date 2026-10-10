@@ -112,6 +112,7 @@ class UserUpdate(BaseModel):
 
         return value
 
+
     @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value):
@@ -168,7 +169,47 @@ class UserUpdate(BaseModel):
             )
 
         return value
-    
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("current_password", mode="before")
+    @classmethod
+    def validate_current_password(cls, value):
+        if value is None or not isinstance(value, str) or not value:
+            raise ValueError("Current password is required")
+
+        return value
+
+    @field_validator("new_password", mode="before")
+    @classmethod
+    def validate_new_password(cls, value):
+        if value is None:
+            raise ValueError("New password is required")
+
+        if not isinstance(value, str):
+            raise ValueError("New password must be a string")
+
+        if not value.strip():
+            raise ValueError("New password cannot be empty or whitespace")
+
+        if not any(char.isupper() for char in value):
+            raise ValueError("New password must contain at least one uppercase letter")
+
+        if not any(char.islower() for char in value):
+            raise ValueError("New password must contain at least one lowercase letter")
+
+        if not any(char.isdigit() for char in value):
+            raise ValueError("New password must contain at least one number")
+
+        if not any(not char.isalnum() for char in value):
+            raise ValueError("New password must contain at least one special character")
+
+        return value
+
+
 class UserLogin(BaseModel):
     email: str = Field(min_length=5, max_length=100)
     password: str = Field(min_length=8, max_length=100)

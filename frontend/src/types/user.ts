@@ -11,3 +11,12 @@ export type UpdateProfileInput = {
 	username: string
 	email: string
 }
+
+export type ChangePasswordInput = {
+	current_password: string
+	new_password: string
+}
+
+export type ChangePasswordFormInput = ChangePasswordInput & {
+	confirm_password: string
+}

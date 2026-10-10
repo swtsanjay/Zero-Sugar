@@ -4,6 +4,7 @@ const API_ENDPOINTS = {
 	LOGIN: '/user/login',
 	REFRESH: '/user/refresh',
 	PROFILE: '/user/profile',
+	CHANGE_PASSWORD: '/user/change-password',
 } as const
 
 export default API_ENDPOINTS
