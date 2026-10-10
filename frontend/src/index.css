@@ -114,6 +114,37 @@ button, input { font: inherit; }
 .chat-content { background: #020617; }
 .chat-header { border-color: #1e293b; }
 
+.profile-shell {
+  --profile-card-bg: #101916;
+  color: #e2e8f0;
+  background:
+    radial-gradient(circle at 85% 5%, rgba(16,185,129,.12), transparent 30%),
+    #07110e;
+}
+.profile-card { background: var(--profile-card-bg); border-color: rgba(255,255,255,.08); }
+.profile-banner { background: linear-gradient(120deg, #064e3b, #10b981 55%, #5eead4); }
+.profile-detail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+}
+.profile-detail-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: #6ee7b7;
+  background: rgba(52,211,153,.1);
+}
+.profile-edit-panel { border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.035); }
+
 :root[data-theme='light'] .auth-shell {
   color: #17211d;
   background-color: #f4f8f6 !important;
@@ -158,6 +189,16 @@ button, input { font: inherit; }
 :root[data-theme='light'] .chat-sidebar { border-color: #e2e8f0; background: #f8fafc; }
 :root[data-theme='light'] .chat-content { background: #ffffff; }
 :root[data-theme='light'] .chat-header { border-color: #e2e8f0; }
+:root[data-theme='light'] .profile-shell {
+  --profile-card-bg: #ffffff;
+  color: #17211d;
+  background:
+    radial-gradient(circle at 85% 5%, rgba(16,185,129,.14), transparent 30%),
+    #f4f8f6;
+}
+:root[data-theme='light'] .profile-card { border-color: rgba(15,23,42,.08); box-shadow: 0 24px 70px rgba(15,59,43,.09); }
+:root[data-theme='light'] .profile-detail { border-color: rgba(15,23,42,.08); background: #f8faf9; }
+:root[data-theme='light'] .profile-edit-panel { border-color: rgba(15,23,42,.08); background: #f8faf9; }
 
 @media (max-width: 639px) {
   .auth-card { border-radius: 22px; }

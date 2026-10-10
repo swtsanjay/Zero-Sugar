@@ -7,6 +7,7 @@ import type { LoginData } from './types/auth';
 import { setAccessToken } from './utils/token-manager';
 import AuthPage, { type AuthMode } from './views/auth/AuthPage';
 import ChatPage from './views/chat/ChatPage';
+import ProfilePage from './views/profile/ProfilePage';
 
 type AuthNavigationState = {
 	email?: string
@@ -96,6 +97,14 @@ export default function App() {
 					path="/chat"
 					element={session ? (
 						<ChatPage themePreference={preference} onThemeChange={setPreference} />
+					) : (
+						<Navigate to="/login" replace />
+					)}
+				/>
+				<Route
+					path="/profile"
+					element={session ? (
+						<ProfilePage themePreference={preference} onThemeChange={setPreference} />
 					) : (
 						<Navigate to="/login" replace />
 					)}

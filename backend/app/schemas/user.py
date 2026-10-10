@@ -96,6 +96,60 @@ class UserCreate(BaseModel):
         return value
 
 
+class UserUpdate(BaseModel):
+    name: str = Field(min_length=3, max_length=50)
+    email: str = Field(min_length=5, max_length=100)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("Name can not be empty or white space")
+
+        return value
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email(cls, value):
+        if value is None:
+            raise ValueError("Email is required")
+
+        if not isinstance(value, str):
+            raise ValueError("Email must be a string")
+        
+        value = value.strip()
+
+        if not value:
+            raise ValueError("Email cannot be empty or whitespace")
+
+        if len(value) > 254:
+            raise ValueError("Email cannot exceed 254 characters")
+
+        email_pattern = re.compile(
+            r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+            r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+            r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+        )
+
+        if not email_pattern.match(value):
+            raise ValueError("Invalid email address")
+
+        if ".." in value:
+            raise ValueError("Email cannot contain consecutive dots")
+
+        local_part = value.split("@")[0]
+
+        if local_part.startswith(".") or local_part.endswith("."):
+            raise ValueError("Invalid email address")
+
+        return value.lower()
+
+
+    
+
+
 class UserLogin(BaseModel):
     email: str = Field(min_length=5, max_length=100)
     password: str = Field(min_length=8, max_length=100)

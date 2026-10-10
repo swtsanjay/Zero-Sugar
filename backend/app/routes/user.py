@@ -1,8 +1,8 @@
 from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Cookie, Response, Depends
-from app.schemas.user import LoginResponse, UserCreate, UserCreateResponse, UserLogin, ProfileResponse
-from app.repository.user import create, getbyemail, getbyid
+from app.schemas.user import LoginResponse, UserCreate, UserUpdate, UserCreateResponse, UserLogin, ProfileResponse
+from app.repository.user import create, getbyemail, getbyid, update_profile
 from app.utils.password import verify_password
 from app.utils.token import create_access_token, create_refresh_token
 from app.core.responses import ApiResponse, success_response
@@ -70,6 +70,14 @@ def refresh_access_token(
             token_type="bearer",
         ),
         message="Access token refreshed",
+    )
+
+
+@router.put("/profile", response_model=ApiResponse[ProfileResponse])
+def update_user_profile(data: UserUpdate, user_id: UUID = Depends(verify_token),):
+    return success_response(
+        data= update_profile(user_id, data.name, data.email),
+        message="Profile updated",
     )
 
 

@@ -1,7 +1,8 @@
-import { MessageOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
+import { MessageOutlined, PlusOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Input, Layout, Spin, Tag, Typography } from 'antd';
 import { useHealth } from '../../hooks/api/useHealth';
 import type { ThemePreference } from '../../hooks/useTheme';
+import { Link } from 'react-router-dom';
 import ThemeSwitcher from '../theme/ThemeSwitcher';
 
 const { Sider, Content } = Layout;
@@ -34,6 +35,9 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 						) : (
 							<Tag color="error">Backend offline</Tag>
 						)}
+						<Link to="/profile">
+							<Button shape="circle" aria-label="Open profile" icon={<UserOutlined />} />
+						</Link>
 						<ThemeSwitcher value={themePreference} onChange={onThemeChange} />
 					</div>
 				</header>
