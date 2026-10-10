@@ -1,13 +1,13 @@
 import { MessageOutlined, PlusOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Button, Input, Layout, Spin, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Alert, Button, Input, Layout, Pagination, Spin, Tag, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useHealth } from '../../hooks/api/useHealth';
 import { useConversations } from '../../hooks/api/useConversation';
-import { useCreateMessage } from '../../hooks/api/useMessage';
+import { useCreateMessage, useMessageListData } from '../../hooks/api/useMessage';
 import type { ThemePreference } from '../../hooks/useTheme';
 import type { ChatMessage } from '../../types/message';
 import { parseApiError } from '../../utils/api-error';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ThemeSwitcher from '../theme/ThemeSwitcher';
 
 const { Sider, Content } = Layout;
@@ -19,12 +19,20 @@ type ChatPageProps = {
 }
 
 export default function ChatPage({ themePreference, onThemeChange }: ChatPageProps) {
+	const navigate = useNavigate();
+	const { conversationId: routeConversationId } = useParams<{ conversationId: string }>();
+	const conversationId = routeConversationId ?? null;
 	const health = useHealth();
-	const conversations = useConversations();
+	const conversations = useConversations({ page: 1, limit: 100 });
+	const messageHistory = useMessageListData(conversationId);
 	const [content, setContent] = useState('');
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
-	const [conversationId, setConversationId] = useState<string | null>(null);
 	const [sendError, setSendError] = useState<string | null>(null);
+
+	useEffect(() => {
+		setMessages(conversationId ? (messageHistory.data?.data ?? []) : []);
+	}, [conversationId, messageHistory.data?.data]);
+
 	const createMessage = useCreateMessage({
 		onSuccess: (response) => {
 			setMessages((current) => [
@@ -34,7 +42,7 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 			]);
 
 			if (response.conversation) {
-				setConversationId(response.conversation.id);
+				navigate(`/chat/${response.conversation.id}`, { replace: true });
 			}
 
 			setContent('');
@@ -59,9 +67,9 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 
 	const startNewChat = () => {
 		setMessages([]);
-		setConversationId(null);
 		setContent('');
 		setSendError(null);
+		navigate('/chat');
 	};
 
 	return (
@@ -85,18 +93,32 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 						/>
 					) : conversations.data?.data.length ? (
 						conversations.data.data.map((conversation) => (
-							<div
+							<button
+								type="button"
 								key={conversation.id}
 								title={conversation.title}
-								className={`conversation-item truncate rounded-lg px-3 py-2 text-sm ${conversation.id === conversationId ? 'conversation-item-active' : ''}`}
+								onClick={() => navigate(`/chat/${conversation.id}`)}
+								className={`conversation-item w-full truncate rounded-lg px-3 py-2 text-left text-sm ${conversation.id === conversationId ? 'conversation-item-active' : ''}`}
 							>
 								{conversation.title}
-							</div>
+							</button>
 						))
 					) : (
 						<Text type="secondary" className="px-2 py-4 text-sm">No conversations yet</Text>
 					)}
 				</div>
+
+				{(conversations.data?.qData.total ?? 0) > (conversations.data?.qData.limit ?? 100) ? (
+					<Pagination
+						className="mt-3"
+						simple
+						size="small"
+						current={conversations.data?.qData.page ?? 1}
+						pageSize={conversations.data?.qData.limit ?? 100}
+						total={conversations.data?.qData.total ?? 0}
+						onChange={(page) => conversations.refetchWithQuery({ page })}
+					/>
+				) : null}
 			</Sider>
 
 			<Content className="chat-content flex min-h-screen flex-col">
@@ -116,7 +138,16 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 				</header>
 
 				<main className={`flex flex-1 flex-col px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
-					{messages.length === 0 ? (
+					{messageHistory.isFetching && conversationId && messages.length === 0 ? (
+						<div className="grid flex-1 place-items-center"><Spin /></div>
+					) : messageHistory.isError && conversationId ? (
+						<Alert
+							type="error"
+							showIcon
+							message="Couldn't load this conversation"
+							action={<Button size="small" onClick={() => messageHistory.refetch()}>Retry</Button>}
+						/>
+					) : messages.length === 0 ? (
 						<>
 							<div className="mb-5 rounded-2xl bg-emerald-500/10 p-4 text-3xl text-emerald-400"><MessageOutlined /></div>
 							<Title level={2}>How can I help you today?</Title>

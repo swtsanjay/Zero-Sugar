@@ -8,6 +8,24 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models.conversation import ConversationTable
 from app.core.db import paginate, transaction_scope
 
+def get_by_id(
+    id: UUID,
+    user_id: UUID = None,
+    connection: Optional[Connection] = None,
+):
+    try:
+        query = select(ConversationTable).where(
+            ConversationTable.id == id,
+            ConversationTable.deleted_at.is_(None)
+        )
+
+        if user_id is not None:
+            query = query.where(ConversationTable.user_id == user_id)
+
+        with transaction_scope(connection) as active_connection:
+            return active_connection.execute(query).mappings().one_or_none()
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)
 
 def create(
     user_id: UUID,

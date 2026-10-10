@@ -1,3 +1,5 @@
+import type { Pagination } from './conversation';
+
 export type CreateMessageInput = {
 	content: string
 	conversationId?: string | null
@@ -31,4 +33,9 @@ export type CreateMessageResponse = {
 	conversation?: Conversation
 	user_message: ChatMessage
 	assistant_message: ChatMessage
+}
+
+export type MessageList = {
+	items: ChatMessage[]
+	pagination: Pagination
 }

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
-from app.schemas.message import MessageCreate, StartConversationResponse, NextMessageResponse
+from fastapi import APIRouter, Depends, Query
+from app.schemas.message import MessageCreate, MessageListResponse, StartConversationResponse, NextMessageResponse
 from app.database import engine
 from app.dependencies.auth import verify_token
-from app.services.chat import next_message, start_conversation
+from app.services.chat import list_messages, next_message, start_conversation
+from app.core.responses import ApiResponse, success_response
 from typing import Annotated
 from uuid import UUID
 
@@ -29,4 +30,21 @@ def create_next_message(conversation_id: UUID, data: MessageCreate):
         conversation_id=conversation_id,
         content=data.content,
         model="qwen3:14b",
+    )
+
+
+@router.get('/{conversation_id}', response_model=ApiResponse[MessageListResponse])
+def get_conversation_messages(
+    conversation_id: UUID,
+    user_id: CurrentUserId,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=100, ge=1, le=100),
+):
+    return success_response(
+        data=list_messages(
+            conversation_id=conversation_id,
+            page=page,
+            limit=limit,
+        ),
+        message="Messages fetched successfully",
     )

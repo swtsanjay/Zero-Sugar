@@ -2,7 +2,10 @@ from uuid import UUID
 
 from app.database import engine
 from app.repository.conversation import create as create_conversation
+from app.repository.conversation import get_by_id as get_conversation_by_id
 from app.repository.message import create as create_message
+from app.repository.message import get as get_messages
+from app.core.exceptions import NotFoundError
 
 
 def start_conversation(
@@ -47,7 +50,6 @@ def next_message(
     model: str,
 ):
     with engine.begin() as connection:
-        
 
         user_message = create_message(
             conversation_id=conversation_id,
@@ -69,3 +71,15 @@ def next_message(
             "user_message": user_message,
             "assistant_message": assistant_message
         }
+
+
+def list_messages(
+    conversation_id: UUID,
+    page: int = 1,
+    limit: int = 100,
+):
+    return get_messages(
+        conversation_id=conversation_id,
+        page=page,
+        limit=limit,
+    )

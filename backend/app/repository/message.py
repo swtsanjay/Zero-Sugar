@@ -6,6 +6,7 @@ from sqlalchemy import insert, select, update, delete, func
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.message import MessageTable
+from app.models.conversation import ConversationTable
 from app.core.db import paginate, transaction_scope
 
 
@@ -89,7 +90,7 @@ def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection
         query = (
             select(MessageTable)
             .where(MessageTable.deleted_at.is_(None))
-            .order_by(MessageTable.sequence_number.desc())
+            .order_by(MessageTable.sequence_number.asc())
         )
     
         if conversation_id is not None:

@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
+from app.schemas.conversation import PaginationResponse
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=500)
@@ -52,3 +53,8 @@ class StartConversationResponse(BaseModel):
 class NextMessageResponse(BaseModel):
     user_message: Message
     assistant_message: Message
+
+
+class MessageListResponse(BaseModel):
+    items: list[Message]
+    pagination: PaginationResponse

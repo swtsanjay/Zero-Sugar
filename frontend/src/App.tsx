@@ -93,14 +93,22 @@ export default function App() {
 				<Route path="/" element={<Navigate to={session ? '/chat' : '/login'} replace />} />
 				<Route path="/login" element={renderAuthPage('login')} />
 				<Route path="/create-account" element={renderAuthPage('create')} />
-				<Route
-					path="/chat"
+					<Route
+						path="/chat"
 					element={session ? (
 						<ChatPage themePreference={preference} onThemeChange={setPreference} />
 					) : (
 						<Navigate to="/login" replace />
 					)}
-				/>
+					/>
+					<Route
+						path="/chat/:conversationId"
+						element={session ? (
+							<ChatPage themePreference={preference} onThemeChange={setPreference} />
+						) : (
+							<Navigate to="/login" replace />
+						)}
+					/>
 				<Route
 					path="/profile"
 					element={session ? (
