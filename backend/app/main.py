@@ -5,6 +5,7 @@ from app.database import Base, engine
 from app.routes.messages import router as message_router
 from app.routes.health import router as health_router
 from app.routes.user import router as user_router
+from app.routes.conversation import router as conversation_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.exception_handlers import app_error_handler, http_error_handler, unexpected_error_handler, validation_error_handler
 from app.core.exceptions import AppError
@@ -53,8 +54,8 @@ app.add_exception_handler(
 app.include_router(message_router)
 app.include_router(health_router)
 app.include_router(user_router)
+app.include_router(conversation_router)
 
 @app.get("/")
 def home():
     return {"message": "Hello from FastAPI"}
-

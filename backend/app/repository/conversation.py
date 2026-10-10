@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 from uuid import UUID
-from app.database import engine
 from sqlalchemy import insert, select, update, delete
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,7 +33,7 @@ def change(
     try:
         query = (
             update(ConversationTable)
-            .where(ConversationTable.id == id)
+            .where(ConversationTable.id == id, ConversationTable.deleted_at.is_(None))
             .returning(ConversationTable)
         )
         if user_id is not None:
@@ -67,7 +66,6 @@ def get(
             query = query.where(ConversationTable.user_id == user_id)
     
         return paginate(
-            engine,
             query,
             {"page": page, "limit": limit},
             connection,

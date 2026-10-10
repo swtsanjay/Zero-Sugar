@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 from uuid import UUID
-from app.database import engine
 from sqlalchemy import insert, select, update, delete, func
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
@@ -96,7 +95,11 @@ def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection
         if conversation_id is not None:
             query = query.where(MessageTable.conversation_id == conversation_id)
     
-        return paginate(engine, query, {"page": page, "limit": limit}, connection)
+        return paginate(
+            query,
+            {"page": page, "limit": limit},
+            connection,
+        )
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 

@@ -25,8 +25,16 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 	const [sendError, setSendError] = useState<string | null>(null);
 	const createMessage = useCreateMessage({
 		onSuccess: (response) => {
-			setMessages((current) => [...current, response.message]);
-			setConversationId(response.conversation.id);
+			setMessages((current) => [
+				...current,
+				response.user_message,
+				response.assistant_message,
+			]);
+
+			if (response.conversation) {
+				setConversationId(response.conversation.id);
+			}
+
 			setContent('');
 			setSendError(null);
 		},
@@ -41,7 +49,10 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 		if (!trimmedContent || createMessage.isPending) return;
 
 		setSendError(null);
-		createMessage.mutate({ content: trimmedContent });
+		createMessage.mutate({
+			content: trimmedContent,
+			conversationId,
+		});
 	};
 
 	const startNewChat = () => {
@@ -89,7 +100,12 @@ export default function ChatPage({ themePreference, onThemeChange }: ChatPagePro
 					) : (
 						<div className="mx-auto flex w-full max-w-3xl flex-col gap-4" data-conversation-id={conversationId ?? undefined}>
 							{messages.map((message) => (
-								<div key={message.id} className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-emerald-500 px-4 py-3 text-left text-slate-950 shadow-sm">
+								<div
+									key={message.id}
+									className={message.role === 'user'
+										? 'ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-emerald-500 px-4 py-3 text-left text-slate-950 shadow-sm'
+										: 'mr-auto max-w-[85%] rounded-2xl rounded-bl-md bg-slate-800 px-4 py-3 text-left text-slate-100 shadow-sm'}
+								>
 									<p className="m-0 whitespace-pre-wrap break-words">{message.content}</p>
 								</div>
 							))}

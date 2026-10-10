@@ -1,5 +1,6 @@
 export type CreateMessageInput = {
 	content: string
+	conversationId?: string | null
 }
 
 export type Conversation = {
@@ -27,6 +28,7 @@ export type ChatMessage = {
 }
 
 export type CreateMessageResponse = {
-	conversation: Conversation
-	message: ChatMessage
+	conversation?: Conversation
+	user_message: ChatMessage
+	assistant_message: ChatMessage
 }

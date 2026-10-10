@@ -1,6 +1,12 @@
 import os
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
 import jwt
+from dotenv import load_dotenv
+
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 jwt_secretkey = os.environ["JWT_SECRETKEY"]
 algorithm = "HS256"

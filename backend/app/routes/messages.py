@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from app.schemas.message import MessageCreate, StartConversationResponse, NextMessageResponse
 from app.database import engine
 from app.dependencies.auth import verify_token
-from app.services.chat import start_conversation
+from app.services.chat import next_message, start_conversation
 from typing import Annotated
 from uuid import UUID
 
@@ -24,8 +24,8 @@ def create_message(data: MessageCreate, user_id: CurrentUserId):
     )
 
 @router.post('/{conversation_id}', response_model=NextMessageResponse, status_code=201)
-def create_message(conversation_id: UUID, data: MessageCreate):
-    return start_conversation(
+def create_next_message(conversation_id: UUID, data: MessageCreate):
+    return next_message(
         conversation_id=conversation_id,
         content=data.content,
         model="qwen3:14b",

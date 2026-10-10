@@ -50,6 +50,5 @@ class StartConversationResponse(BaseModel):
     assistant_message: Message
 
 class NextMessageResponse(BaseModel):
-    conversation: Conversation
     user_message: Message
     assistant_message: Message
