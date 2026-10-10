@@ -85,12 +85,12 @@ def change(
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def list(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection: Optional[Connection] = None):
+def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection: Optional[Connection] = None):
     try:
         query = (
             select(MessageTable)
             .where(MessageTable.deleted_at.is_(None))
-            .order_by(MessageTable.updated_at.desc())
+            .order_by(MessageTable.sequence_number.desc())
         )
     
         if conversation_id is not None:

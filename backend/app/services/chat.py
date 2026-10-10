@@ -10,9 +10,6 @@ def start_conversation(
     content: str,
     model: str,
 ):
-    if engine is None:
-        raise RuntimeError("Database engine is not configured")
-
     with engine.begin() as connection:
         conversation = create_conversation(
             user_id=user_id,
@@ -21,7 +18,7 @@ def start_conversation(
             connection=connection,
         )
 
-        message = create_message(
+        user_message = create_message(
             conversation_id=conversation["id"],
             role="user",
             content=content,
@@ -29,7 +26,46 @@ def start_conversation(
             connection=connection,
         )
 
+        assistant_message = create_message(
+            conversation_id=conversation["id"],
+            role="assistant",
+            content="Some reply from assistant",
+            model=model,
+            connection=connection,
+        )
+
         return {
             "conversation": conversation,
-            "message": message,
+            "user_message": user_message,
+            "assistant_message": assistant_message
+        }
+
+
+def next_message(
+    conversation_id: UUID,
+    content: str,
+    model: str,
+):
+    with engine.begin() as connection:
+        
+
+        user_message = create_message(
+            conversation_id=conversation_id,
+            role="user",
+            content=content,
+            model=model,
+            connection=connection,
+        )
+
+        assistant_message = create_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content="Some reply from assistant",
+            model=model,
+            connection=connection,
+        )
+
+        return {
+            "user_message": user_message,
+            "assistant_message": assistant_message
         }

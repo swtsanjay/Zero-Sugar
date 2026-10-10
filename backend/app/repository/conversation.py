@@ -24,7 +24,13 @@ def create(
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def change(id: UUID, user_id: UUID = None, title: str = None, model: str = None):
+def change(
+    id: UUID,
+    user_id: Optional[UUID] = None,
+    title: Optional[str] = None,
+    model: Optional[str] = None,
+    connection: Optional[Connection] = None,
+):
     try:
         query = (
             update(ConversationTable)
@@ -38,13 +44,18 @@ def change(id: UUID, user_id: UUID = None, title: str = None, model: str = None)
         if model is not None:
             query = query.values(model = model)
 
-        with engine.begin() as connection:
-            return connection.execute(query).mappings().one_or_none()
+        with transaction_scope(connection) as active_connection:
+            return active_connection.execute(query).mappings().one_or_none()
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def list(user_id: UUID = None, page: int = 1, limit: int = 20):
+def get(
+    user_id: Optional[UUID] = None,
+    page: int = 1,
+    limit: int = 20,
+    connection: Optional[Connection] = None,
+):
     try:
         query = (
             select(ConversationTable)
@@ -55,11 +66,20 @@ def list(user_id: UUID = None, page: int = 1, limit: int = 20):
         if user_id is not None:
             query = query.where(ConversationTable.user_id == user_id)
     
-        return paginate(engine, query, {"page": page, "limit": limit})
+        return paginate(
+            engine,
+            query,
+            {"page": page, "limit": limit},
+            connection,
+        )
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def remove( id: Optional[UUID] = None, user_id: Optional[UUID] = None ) -> list[UUID]:
+def remove(
+    id: Optional[UUID] = None,
+    user_id: Optional[UUID] = None,
+    connection: Optional[Connection] = None,
+) -> list[UUID]:
     if id is None and user_id is None:
         raise ValueError("Either id or user_id is required")
 
@@ -72,8 +92,8 @@ def remove( id: Optional[UUID] = None, user_id: Optional[UUID] = None ) -> list[
         if user_id is not None:
             query = query.where(ConversationTable.user_id == user_id)
 
-        with engine.begin() as connection:
-            return list(connection.execute(query).scalars().all())
+        with transaction_scope(connection) as active_connection:
+            return active_connection.execute(query).scalars().all()
 
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)

@@ -36,7 +36,11 @@ def transaction_scope( connection: Optional[Connection] = None ) -> Iterator[Con
         yield new_connection
 
 
-def paginate( engine: Engine, query: Select, page_query: dict[str, int], connection: Optional[Connection] ) -> PaginationResult:
+def paginate(
+    query: Select,
+    page_query: dict[str, int],
+    connection: Optional[Connection] = None
+) -> PaginationResult:
     page = max(int(page_query.get("page", 1)), 1)
     limit = max(int(page_query.get("limit", 20)), 1)
     offset = (page - 1) * limit

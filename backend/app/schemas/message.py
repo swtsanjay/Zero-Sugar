@@ -44,6 +44,12 @@ class Conversation(BaseModel):
     deleted_at: Optional[datetime] = None
 
 
-class MessageCreateResponse(BaseModel):
+class StartConversationResponse(BaseModel):
     conversation: Conversation
-    message: Message
+    user_message: Message
+    assistant_message: Message
+
+class NextMessageResponse(BaseModel):
+    conversation: Conversation
+    user_message: Message
+    assistant_message: Message
