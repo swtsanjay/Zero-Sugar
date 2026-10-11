@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Query
 from app.schemas.message import MessageCreate, MessageListResponse, MessageRegenerate, StartConversationResponse, NextMessageResponse, RegeneratedMessageResponse
 from app.database import engine
 from app.dependencies.auth import verify_token
-from app.services.chat import list_messages, next_message, start_conversation, regenerate_message
+from app.services.chat import list_messages, stream_message, start_conversation, regenerate_message
 from app.core.responses import ApiResponse, success_response
+from fastapi.responses import StreamingResponse
 from typing import Annotated
 from uuid import UUID
 
@@ -26,10 +27,13 @@ def create_message(data: MessageCreate, user_id: CurrentUserId):
 
 @router.post('/{conversation_id}', response_model=NextMessageResponse, status_code=201)
 def create_next_message(conversation_id: UUID, data: MessageCreate):
-    return next_message(
-        conversation_id=conversation_id,
-        content=data.content,
-        model=data.model,
+    return StreamingResponse(
+        stream_message(
+            conversation_id=conversation_id,
+            content=data.content,
+            model=data.model,
+        ),
+        media_type="text/event-stream",
     )
 
 @router.post('/regenerate/{message_id}', response_model=RegeneratedMessageResponse, status_code=201)

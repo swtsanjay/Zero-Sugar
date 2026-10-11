@@ -37,6 +37,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 	const { conversationId, messages } = props;
 	const scrollContainerRef = useRef<HTMLElement>(null);
 	const previousLastMessageIdRef = useRef<string | null>(null);
+	const previousLastContentLengthRef = useRef(0);
 	const previousScrollHeightRef = useRef<number | null>(null);
 	const wasLoadingOlderRef = useRef(false);
 
@@ -50,11 +51,19 @@ export default function ChatPanel(props: ChatPanelProps) {
 		}
 
 		const lastMessageId = messages[messages.length - 1]?.id ?? null;
+		const lastMessageContentLength = messages[messages.length - 1]?.content.length ?? 0;
 		if (lastMessageId && lastMessageId !== previousLastMessageIdRef.current) {
 			container.scrollTo({ top: container.scrollHeight, behavior: previousLastMessageIdRef.current ? 'smooth' : 'auto' });
+		} else if (
+			lastMessageId
+			&& lastMessageContentLength > previousLastContentLengthRef.current
+			&& container.scrollHeight - container.scrollTop - container.clientHeight < 240
+		) {
+			container.scrollTop = container.scrollHeight;
 		}
 
 		previousLastMessageIdRef.current = lastMessageId;
+		previousLastContentLengthRef.current = lastMessageContentLength;
 		wasLoadingOlderRef.current = props.isLoadingOlder;
 	}, [messages, props.isLoadingOlder]);
 
@@ -91,7 +100,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 								message={message}
 								isRegenerating={props.regeneratingMessageId === message.id}
 								disableRegenerate={props.regeneratingMessageId !== null || props.isSending}
-								isOptimistic={message.id.startsWith('optimistic-assistant-')}
+								isOptimistic={message.id.startsWith('optimistic-assistant-') || (message.status === 'streaming' && !message.content)}
 								onRegenerate={props.onRegenerate}
 							/>
 						))}

@@ -36,6 +36,24 @@ export type CreateMessageResponse = {
 	assistant_message: ChatMessage
 }
 
+export type StreamMessageInput = {
+	conversationId: string
+	content: string
+	model: string
+}
+
+export type StreamMessageStart = {
+	user_message: ChatMessage
+	assistant_message: ChatMessage
+}
+
+export type StreamMessageContent = {
+	message_id: string
+	content: string
+}
+
+export type StreamMessageDone = StreamMessageStart
+
 export type RegenerateMessageInput = {
 	messageId: string
 	conversationId: string

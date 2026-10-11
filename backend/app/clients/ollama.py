@@ -1,8 +1,9 @@
 import os
+import json
 from typing import TypedDict
 import httpx
 import time
-
+from collections.abc import Iterator
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
@@ -70,3 +71,40 @@ def generate_chat(
 
     except httpx.RequestError as error:
         raise OllamaClientError("Ollama request failed") from error
+
+
+
+def stream_chat(
+    model: str,
+    messages: list[OllamaMessage],
+) -> Iterator[dict]:
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": True,
+    }
+
+    with httpx.stream( "POST", f"{OLLAMA_BASE_URL}/api/chat", json=payload, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+
+            chunk = json.loads(line)
+
+            if chunk.get("done"):
+                yield {
+                    "type": "done",
+                    "prompt_tokens": chunk.get("prompt_eval_count", 0),
+                    "completion_tokens": chunk.get("eval_count", 0),
+                }
+                return
+
+            content = chunk.get("message", {}).get("content", "")
+
+            if content:
+                yield {
+                    "type": "content",
+                    "content": content,
+                }

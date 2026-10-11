@@ -17,6 +17,7 @@ def create(
         model: str, 
         execution_time: int = 0,
         tokens: int = 0,
+        status: str = "pending",
         connection: Optional[Connection] = None
     ):
     try:
@@ -40,6 +41,7 @@ def create(
                 execution_time=execution_time,
                 model=model,
                 tokens=tokens,
+                status=status,
             ).returning(MessageTable)
 
             return active_connection.execute(query).mappings().one()
@@ -56,6 +58,7 @@ def change(
         execution_time: int = None,
         model: str = None, 
         tokens: int = None,
+        status: str = None,
         connection: Optional[Connection] = None
     ):
     try:
@@ -78,6 +81,8 @@ def change(
             query = query.values(model = model)
         if tokens is not None:
             query = query.values(tokens = tokens)
+        if status is not None:
+            query = query.values(status = status)
         
         with transaction_scope(connection) as active_connection:
             return active_connection.execute(query).mappings().one_or_none()

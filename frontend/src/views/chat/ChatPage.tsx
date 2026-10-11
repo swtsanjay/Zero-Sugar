@@ -1,7 +1,7 @@
 import { Layout } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCreateMessage, useMessageListData, useRegenerateMessage } from '../../hooks/api/useMessage';
+import { useCreateMessage, useMessageListData, useRegenerateMessage, useStreamMessage } from '../../hooks/api/useMessage';
 import { useAvailableModels } from '../../hooks/api/usePublic';
 import type { ChatMessage } from '../../types/message';
 import { parseApiError } from '../../utils/api-error';
@@ -19,6 +19,7 @@ export default function ChatPage() {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [sendError, setSendError] = useState<string | null>(null);
 	const optimisticMessageIds = useRef<{ userId: string; assistantId: string } | null>(null);
+	const pendingStreamRef = useRef<{ content: string; started: boolean } | null>(null);
 
 	useEffect(() => {
 		const models = availableModels.data ?? [];
@@ -77,10 +78,63 @@ export default function ChatPage() {
 		onError: (error) => setSendError(parseApiError(error).message),
 	});
 
+	const streamedMessage = useStreamMessage({
+		onStart: (response) => {
+			const optimisticIds = optimisticMessageIds.current;
+			if (pendingStreamRef.current) pendingStreamRef.current.started = true;
+
+			setMessages((current) => [
+				...current.filter((message) => (
+					message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
+				)),
+				response.user_message,
+				response.assistant_message,
+			]);
+		},
+		onContent: ({ message_id, content: chunk }) => {
+			setMessages((current) => current.map((message) => (
+				message.id === message_id
+					? { ...message, content: message.content + chunk, status: 'streaming' }
+					: message
+			)));
+		},
+		onSuccess: (response) => {
+			setMessages((current) => current.map((message) => {
+				if (message.id === response.user_message.id) return response.user_message;
+				if (message.id === response.assistant_message.id) return response.assistant_message;
+				return message;
+			}));
+			optimisticMessageIds.current = null;
+			pendingStreamRef.current = null;
+			setSendError(null);
+		},
+		onError: (error) => {
+			const pendingStream = pendingStreamRef.current;
+			const optimisticIds = optimisticMessageIds.current;
+
+			if (!pendingStream?.started) {
+				setMessages((current) => current.filter((message) => (
+					message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
+				)));
+				if (pendingStream) setContent(pendingStream.content);
+			} else {
+				setMessages((current) => current.map((message) => (
+					message.role === 'assistant' && message.status === 'streaming'
+						? { ...message, status: 'failed' }
+						: message
+				)));
+			}
+
+			optimisticMessageIds.current = null;
+			pendingStreamRef.current = null;
+			setSendError(error.message);
+		},
+	});
+
 	const submitMessage = () => {
 		const trimmedContent = content.trim();
 
-		if (!trimmedContent || !selectedModel || createMessage.isPending) return;
+		if (!trimmedContent || !selectedModel || createMessage.isPending || streamedMessage.isStreaming) return;
 
 		const now = new Date().toISOString();
 		const optimisticUserId = `optimistic-user-${crypto.randomUUID()}`;
@@ -122,11 +176,21 @@ export default function ChatPage() {
 		]);
 		setContent('');
 		setSendError(null);
-		createMessage.mutate({ content: trimmedContent, model: selectedModel, conversationId });
+
+		if (conversationId) {
+			pendingStreamRef.current = { content: trimmedContent, started: false };
+			void streamedMessage.start({
+				conversationId,
+				content: trimmedContent,
+				model: selectedModel,
+			});
+		} else {
+			createMessage.mutate({ content: trimmedContent, model: selectedModel, conversationId });
+		}
 	};
 
 	const regenerateAssistantMessage = (messageId: string) => {
-		if (!conversationId || !selectedModel || regenerateMessage.isPending) return;
+		if (!conversationId || !selectedModel || regenerateMessage.isPending || streamedMessage.isStreaming) return;
 
 		setSendError(null);
 		regenerateMessage.mutate({ messageId, conversationId, model: selectedModel });
@@ -154,7 +218,7 @@ export default function ChatPage() {
 				models={availableModels.data ?? []}
 				isModelsLoading={availableModels.isLoading}
 				hasModelsError={availableModels.isError}
-				isSending={createMessage.isPending}
+				isSending={createMessage.isPending || streamedMessage.isStreaming}
 				regeneratingMessageId={regenerateMessage.isPending ? regenerateMessage.variables?.messageId ?? null : null}
 				isHistoryLoading={messageHistory.isLoading}
 				isLoadingOlder={messageHistory.isFetchingNextPage}
