@@ -16,8 +16,7 @@ def create(
         content: str, 
         model: str, 
         execution_time: int = 0,
-        prompt_tokens: int = 0,
-        completion_tokens: int = 0,
+        tokens: int = 0,
         connection: Optional[Connection] = None
     ):
     try:
@@ -40,8 +39,7 @@ def create(
                 sequence_number=next_sequence_number,
                 execution_time=execution_time,
                 model=model,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
+                tokens=tokens,
             ).returning(MessageTable)
 
             return active_connection.execute(query).mappings().one()
@@ -57,8 +55,7 @@ def change(
         sequence_number: int = None, 
         execution_time: int = None,
         model: str = None, 
-        prompt_tokens: int = None, 
-        completion_tokens: int = None ,
+        tokens: int = None,
         connection: Optional[Connection] = None
     ):
     try:
@@ -79,11 +76,9 @@ def change(
             query = query.values(execution_time = execution_time)
         if model is not None:
             query = query.values(model = model)
-        if prompt_tokens is not None:
-            query = query.values(prompt_tokens = prompt_tokens)
-        if completion_tokens is not None:
-            query = query.values(completion_tokens = completion_tokens)
-
+        if tokens is not None:
+            query = query.values(tokens = tokens)
+        
         with transaction_scope(connection) as active_connection:
             return active_connection.execute(query).mappings().one_or_none()
 

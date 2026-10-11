@@ -25,8 +25,7 @@ export type ChatMessage = {
 	execution_time: number
 	status: 'pending' | 'streaming' | 'completed' | 'failed' | 'cancelled'
 	model: string | null
-	prompt_tokens: number | null
-	completion_tokens: number | null
+	tokens: number | null
 	created_at: string
 	updated_at: string
 }

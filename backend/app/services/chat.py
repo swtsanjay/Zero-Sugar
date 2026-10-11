@@ -7,6 +7,7 @@ from app.repository.message import change as change_message
 from app.repository.message import create as create_message
 from app.repository.message import get as get_messages, get_by_id
 from app.clients.ollama import generate_chat
+from app.core.db import transaction_scope
 
 
 
@@ -34,20 +35,6 @@ def start_conversation(
     # the database limit before inserting it into conversations.title.
     conversation_title = " ".join(ass_title_res["content"].split()).strip()[:200]
 
-    conversation = create_conversation(
-        user_id=user_id,
-        title=conversation_title or content[:200],
-        model=model,
-    )
-
-    user_message = create_message(
-        conversation_id=conversation["id"],
-        role="user",
-        content=content,
-        model=model,
-        # connection=connection,
-    )
-
     ass_res = generate_chat(
         model="qwen3:14b",
         messages=[
@@ -58,21 +45,38 @@ def start_conversation(
         ]
     )
 
-    assistant_message = create_message(
-        conversation_id=conversation["id"],
-        role="assistant",
-        content=ass_res["content"],
-        model=model,
-        prompt_tokens=ass_res["prompt_tokens"],
-        completion_tokens=ass_res["completion_tokens"],
-        execution_time=ass_res["execution_time"]
-    )
+    with transaction_scope() as connection:
+        conversation = create_conversation(
+            user_id=user_id,
+            title=conversation_title or content[:200],
+            model=model,
+            connection=connection
+        )
 
-    return {
-        "conversation": conversation,
-        "user_message": user_message,
-        "assistant_message": assistant_message
-    }
+        user_message = create_message(
+            conversation_id=conversation["id"],
+            role="user",
+            content=content,
+            model=model,
+            tokens=ass_res["prompt_tokens"],
+            connection=connection
+        )
+
+        assistant_message = create_message(
+            conversation_id=conversation["id"],
+            role="assistant",
+            content=ass_res["content"],
+            model=model,
+            tokens=ass_res["completion_tokens"],
+            execution_time=ass_res["execution_time"],
+            connection=connection
+        )
+
+        return {
+            "conversation": conversation,
+            "user_message": user_message,
+            "assistant_message": assistant_message
+        }
 
 
 def regenerate_message(
@@ -108,8 +112,7 @@ def regenerate_message(
         id=message_id,
         content=ass_res["content"],
         model=model,
-        prompt_tokens=ass_res["prompt_tokens"],
-        completion_tokens=ass_res["completion_tokens"],
+        token=ass_res["completion_tokens"],
         execution_time=ass_res["execution_time"]
     )
 
@@ -123,40 +126,40 @@ def next_message(
     content: str,
     model: str,
 ):
-    with engine.begin() as connection:
+    ass_res = generate_chat(
+            model="qwen3:14b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": content
+                }
+            ]
+        )
+    with transaction_scope() as connection:
 
         user_message = create_message(
             conversation_id=conversation_id,
             role="user",
             content=content,
             model=model,
+            tokens=ass_res["prompt_tokens"],
             connection=connection,
         )
 
-    ass_res = generate_chat(
-        model="qwen3:14b",
-        messages=[
-            {
-                "role": "user",
-                "content": content
-            }
-        ]
-    )
+        assistant_message = create_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=ass_res["content"],
+            model=model,
+            tokens=ass_res["completion_tokens"],
+            execution_time=ass_res["execution_time"],
+            connection=connection,
+        )
 
-    assistant_message = create_message(
-        conversation_id=conversation_id,
-        role="assistant",
-        content=ass_res["content"],
-        model=model,
-        prompt_tokens=ass_res["prompt_tokens"],
-        completion_tokens=ass_res["completion_tokens"],
-        execution_time=ass_res["execution_time"]
-    )
-
-    return {
-        "user_message": user_message,
-        "assistant_message": assistant_message
-    }
+        return {
+            "user_message": user_message,
+            "assistant_message": assistant_message
+        }
 
 
 def list_messages(

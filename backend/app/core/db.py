@@ -39,8 +39,26 @@ def transaction_scope( connection: Optional[Connection] = None ) -> Iterator[Con
 def paginate(
     query: Select,
     page_query: dict[str, int],
-    connection: Optional[Connection] = None
+    connection: Optional[Connection] = None,
+    all: bool = False,
 ) -> PaginationResult:
+    if all:
+        with transaction_scope(connection) as active_connection:
+            items = active_connection.execute(query).mappings().all()
+
+        total = len(items)
+        return {
+            "items": items,
+            "pagination": {
+                "page": 1,
+                "limit": total,
+                "total": total,
+                "total_pages": 1 if total else 0,
+                "has_next": False,
+                "has_previous": False,
+            },
+        }
+
     page = max(int(page_query.get("page", 1)), 1)
     limit = max(int(page_query.get("limit", 20)), 1)
     offset = (page - 1) * limit

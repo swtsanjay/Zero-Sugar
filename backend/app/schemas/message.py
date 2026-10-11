@@ -31,8 +31,7 @@ class Message(BaseModel):
     execution_time: int
     status: str
     model: Optional[str] = None
-    prompt_tokens: Optional[int] = None
-    completion_tokens: Optional[int] = None
+    tokens: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
