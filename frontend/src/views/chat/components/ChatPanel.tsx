@@ -13,11 +13,13 @@ type ChatPanelProps = {
 	messages: ChatMessage[]
 	content: string
 	isSending: boolean
+	regeneratingMessageId: string | null
 	isHistoryLoading: boolean
 	hasHistoryError: boolean
 	sendError: string | null
 	onContentChange: (value: string) => void
 	onSend: () => void
+	onRegenerate: (messageId: string) => void
 	onRetryHistory: () => void
 	onDismissSendError: () => void
 }
@@ -43,7 +45,13 @@ export default function ChatPanel(props: ChatPanelProps) {
 						{messages.map((message) => message.role === 'user' ? (
 							<UserMessageBubble key={message.id} message={message} />
 						) : (
-							<AssistantMessageBubble key={message.id} message={message} />
+							<AssistantMessageBubble
+								key={message.id}
+								message={message}
+								isRegenerating={props.regeneratingMessageId === message.id}
+								disableRegenerate={props.regeneratingMessageId !== null || props.isSending}
+								onRegenerate={props.onRegenerate}
+							/>
 						))}
 					</div>
 				)}

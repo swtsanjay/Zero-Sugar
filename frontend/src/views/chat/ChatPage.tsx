@@ -1,7 +1,7 @@
 import { Layout } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCreateMessage, useMessageListData } from '../../hooks/api/useMessage';
+import { useCreateMessage, useMessageListData, useRegenerateMessage } from '../../hooks/api/useMessage';
 import type { ChatMessage } from '../../types/message';
 import { parseApiError } from '../../utils/api-error';
 import ChatPanel from './components/ChatPanel';
@@ -34,6 +34,18 @@ export default function ChatPage() {
 		onError: (error) => setSendError(parseApiError(error).message),
 	});
 
+	const regenerateMessage = useRegenerateMessage({
+		onSuccess: (response) => {
+			setMessages((current) => current.map((message) => (
+				message.id === response.assistant_message.id
+					? response.assistant_message
+					: message
+			)));
+			setSendError(null);
+		},
+		onError: (error) => setSendError(parseApiError(error).message),
+	});
+
 	const submitMessage = () => {
 		const trimmedContent = content.trim();
 
@@ -41,6 +53,13 @@ export default function ChatPage() {
 
 		setSendError(null);
 		createMessage.mutate({ content: trimmedContent, conversationId });
+	};
+
+	const regenerateAssistantMessage = (messageId: string) => {
+		if (!conversationId || regenerateMessage.isPending) return;
+
+		setSendError(null);
+		regenerateMessage.mutate({ messageId, conversationId });
 	};
 
 	const startNewChat = () => {
@@ -62,11 +81,13 @@ export default function ChatPage() {
 				messages={messages}
 				content={content}
 				isSending={createMessage.isPending}
+				regeneratingMessageId={regenerateMessage.isPending ? regenerateMessage.variables?.messageId ?? null : null}
 				isHistoryLoading={messageHistory.isFetching}
 				hasHistoryError={messageHistory.isError}
 				sendError={sendError}
 				onContentChange={setContent}
 				onSend={submitMessage}
+				onRegenerate={regenerateAssistantMessage}
 				onRetryHistory={() => messageHistory.refetch()}
 				onDismissSendError={() => setSendError(null)}
 			/>

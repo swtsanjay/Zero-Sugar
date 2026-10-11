@@ -90,6 +90,20 @@ def change(
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
+def get_by_id(message_id: UUID = None, connection: Optional[Connection] = None):
+    try:
+        query = (
+            select(MessageTable)
+            .where(MessageTable.deleted_at.is_(None))
+            .where(MessageTable.id == message_id)
+        )
+    
+        with transaction_scope(connection) as connection:
+            return connection.execute(query).mappings().one_or_none()
+    
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(e)
+
 def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection: Optional[Connection] = None):
     try:
         query = (

@@ -1,6 +1,6 @@
 import API_ENDPOINTS from '../constants/api-endpoints';
 import type { ApiResponse } from '../types/api';
-import type { CreateMessageInput, CreateMessageResponse, MessageList } from '../types/message';
+import type { CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse } from '../types/message';
 import { apiClient } from './client';
 
 export async function createMessage(input: CreateMessageInput): Promise<CreateMessageResponse> {
@@ -22,6 +22,14 @@ export async function getMessages(
 	const response = await apiClient.get<ApiResponse<MessageList>>(
 		`${API_ENDPOINTS.MESSAGE}/${conversationId}`,
 		{ params },
+	);
+
+	return response.data;
+}
+
+export async function regenerateMessage(input: RegenerateMessageInput): Promise<RegenerateMessageResponse> {
+	const response = await apiClient.post<RegenerateMessageResponse>(
+		`${API_ENDPOINTS.REGENERATE_MESSAGE}/${input.messageId}`,
 	);
 
 	return response.data;

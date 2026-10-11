@@ -55,6 +55,9 @@ class NextMessageResponse(BaseModel):
     user_message: Message
     assistant_message: Message
 
+class RegeneratedMessageResponse(BaseModel):
+    assistant_message: Message
+
 
 class MessageListResponse(BaseModel):
     items: list[Message]

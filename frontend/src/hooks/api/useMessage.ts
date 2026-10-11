@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
-import { createMessage, getMessages } from '../../api/message.api';
+import { createMessage, getMessages, regenerateMessage } from '../../api/message.api';
 import type { ApiResponse } from '../../types/api';
-import type { ChatMessage, CreateMessageInput, CreateMessageResponse, MessageList } from '../../types/message';
+import type { ChatMessage, CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse } from '../../types/message';
 import API_ENDPOINTS from '../../constants/api-endpoints';
 
 type MessageListQuery = {
@@ -100,6 +100,27 @@ export function useCreateMessage(options: CreateMessageOptions = {}) {
 					queryKey: [API_ENDPOINTS.MESSAGE, conversationId],
 				});
 			}
+
+			options.onSuccess?.(response, variables, onMutateResult, context);
+		},
+	});
+}
+
+type RegenerateMessageOptions = Omit<
+	UseMutationOptions<RegenerateMessageResponse, Error, RegenerateMessageInput>,
+	'mutationFn'
+>
+
+export function useRegenerateMessage(options: RegenerateMessageOptions = {}) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: regenerateMessage,
+		...options,
+		onSuccess: (response, variables, onMutateResult, context) => {
+			queryClient.invalidateQueries({
+				queryKey: [API_ENDPOINTS.MESSAGE, variables.conversationId],
+			});
 
 			options.onSuccess?.(response, variables, onMutateResult, context);
 		},

@@ -21,6 +21,7 @@ export type ChatMessage = {
 	role: 'system' | 'user' | 'assistant'
 	content: string
 	sequence_number: number
+	execution_time: number
 	status: 'pending' | 'streaming' | 'completed' | 'failed' | 'cancelled'
 	model: string | null
 	prompt_tokens: number | null
@@ -32,6 +33,15 @@ export type ChatMessage = {
 export type CreateMessageResponse = {
 	conversation?: Conversation
 	user_message: ChatMessage
+	assistant_message: ChatMessage
+}
+
+export type RegenerateMessageInput = {
+	messageId: string
+	conversationId: string
+}
+
+export type RegenerateMessageResponse = {
 	assistant_message: ChatMessage
 }
 

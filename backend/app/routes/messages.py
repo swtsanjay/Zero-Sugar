@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
-from app.schemas.message import MessageCreate, MessageListResponse, StartConversationResponse, NextMessageResponse
+from app.schemas.message import MessageCreate, MessageListResponse, StartConversationResponse, NextMessageResponse, RegeneratedMessageResponse
 from app.database import engine
 from app.dependencies.auth import verify_token
-from app.services.chat import list_messages, next_message, start_conversation
+from app.services.chat import list_messages, next_message, start_conversation, regenerate_message
 from app.core.responses import ApiResponse, success_response
 from typing import Annotated
 from uuid import UUID
@@ -29,6 +29,13 @@ def create_next_message(conversation_id: UUID, data: MessageCreate):
     return next_message(
         conversation_id=conversation_id,
         content=data.content,
+        model="qwen3:14b",
+    )
+
+@router.post('/regenerate/{message_id}', response_model=RegeneratedMessageResponse, status_code=201)
+def regenerate_assistant_message(message_id: UUID):
+    return regenerate_message(
+        message_id=message_id,
         model="qwen3:14b",
     )
 

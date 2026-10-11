@@ -1,12 +1,48 @@
+import { ClockCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Typography } from 'antd';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '../../../types/message';
 
-export default function AssistantMessageBubble({ message }: { message: ChatMessage }) {
+const { Text } = Typography;
+
+type AssistantMessageBubbleProps = {
+	message: ChatMessage
+	isRegenerating: boolean
+	disableRegenerate: boolean
+	onRegenerate: (messageId: string) => void
+}
+
+export default function AssistantMessageBubble({ message, isRegenerating, disableRegenerate, onRegenerate }: AssistantMessageBubbleProps) {
+	const executionTime = Number(message.execution_time);
+	const formattedExecutionTime = Number.isFinite(executionTime)
+		? `${executionTime.toFixed(2)} s`
+		: '—';
+
 	return (
-		<div className="assistant-message mr-auto max-w-[90%] rounded-2xl rounded-bl-md bg-slate-800 px-5 py-4 text-left text-slate-100 shadow-sm">
-			<div className="assistant-markdown break-words">
-				<ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+		<div className="mr-auto max-w-[90%]">
+			<div className="assistant-message rounded-2xl rounded-bl-md bg-slate-800 px-5 py-4 text-left text-slate-100 shadow-sm">
+				<div className="assistant-markdown break-words">
+					<ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+				</div>
+			</div>
+
+			<div className="mt-2 flex items-center gap-2 px-1">
+				<Text type="secondary" className="text-xs">
+					<ClockCircleOutlined className="mr-1" />
+					{formattedExecutionTime}
+				</Text>
+				<Tooltip title="Regenerate response">
+					<Button
+						type="text"
+						size="small"
+						disabled={disableRegenerate}
+						loading={isRegenerating}
+						onClick={() => onRegenerate(message.id)}
+						aria-label="Regenerate response"
+						icon={<ReloadOutlined />}
+					/>
+				</Tooltip>
 			</div>
 		</div>
 	);
