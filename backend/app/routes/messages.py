@@ -36,7 +36,6 @@ def create_next_message(conversation_id: UUID, data: MessageCreate):
 @router.get('/{conversation_id}', response_model=ApiResponse[MessageListResponse])
 def get_conversation_messages(
     conversation_id: UUID,
-    user_id: CurrentUserId,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
 ):

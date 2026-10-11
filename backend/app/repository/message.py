@@ -15,6 +15,7 @@ def create(
         role: str, 
         content: str, 
         model: str, 
+        execution_time: int = 0,
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
         connection: Optional[Connection] = None
@@ -37,6 +38,7 @@ def create(
                 role=role,
                 content=content,
                 sequence_number=next_sequence_number,
+                execution_time=execution_time,
                 model=model,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
@@ -53,6 +55,7 @@ def change(
         role: str = None, 
         content: str = None, 
         sequence_number: int = None, 
+        execution_time: int = None,
         model: str = None, 
         prompt_tokens: int = None, 
         completion_tokens: int = None ,
@@ -72,6 +75,8 @@ def change(
             query = query.values(content = content)
         if sequence_number is not None:
             query = query.values(sequence_number = sequence_number)
+        if execution_time is not None:
+            query = query.values(execution_time = execution_time)
         if model is not None:
             query = query.values(model = model)
         if prompt_tokens is not None:

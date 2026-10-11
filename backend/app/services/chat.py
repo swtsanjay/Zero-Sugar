@@ -5,7 +5,8 @@ from app.repository.conversation import create as create_conversation
 from app.repository.conversation import get_by_id as get_conversation_by_id
 from app.repository.message import create as create_message
 from app.repository.message import get as get_messages
-from app.core.exceptions import NotFoundError
+from app.clients.ollama import generate_chat
+
 
 
 def start_conversation(
@@ -59,18 +60,30 @@ def next_message(
             connection=connection,
         )
 
-        assistant_message = create_message(
-            conversation_id=conversation_id,
-            role="assistant",
-            content="Some reply from assistant",
-            model=model,
-            connection=connection,
-        )
+    ollamaRes = generate_chat(
+        model="qwen3:14b",
+        messages=[
+            {
+                "role": "user",
+                "content": content
+            }
+        ]
+    )
 
-        return {
-            "user_message": user_message,
-            "assistant_message": assistant_message
-        }
+    assistant_message = create_message(
+        conversation_id=conversation_id,
+        role="assistant",
+        content=ollamaRes["content"],
+        model=model,
+        prompt_tokens=ollamaRes["prompt_tokens"],
+        completion_tokens=ollamaRes["completion_tokens"],
+        execution_time=ollamaRes["execution_time"]
+    )
+
+    return {
+        "user_message": user_message,
+        "assistant_message": assistant_message
+    }
 
 
 def list_messages(

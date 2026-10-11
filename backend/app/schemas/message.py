@@ -27,6 +27,7 @@ class Message(BaseModel):
     role: str
     content: str
     sequence_number: int
+    execution_time: int
     status: str
     model: Optional[str] = None
     prompt_tokens: Optional[int] = None
