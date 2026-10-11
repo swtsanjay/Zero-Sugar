@@ -40,6 +40,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 	const previousLastContentLengthRef = useRef(0);
 	const previousScrollHeightRef = useRef<number | null>(null);
 	const wasLoadingOlderRef = useRef(false);
+	const shouldFollowStreamRef = useRef(true);
 
 	useLayoutEffect(() => {
 		const container = scrollContainerRef.current;
@@ -52,12 +53,12 @@ export default function ChatPanel(props: ChatPanelProps) {
 
 		const lastMessageId = messages[messages.length - 1]?.id ?? null;
 		const lastMessageContentLength = messages[messages.length - 1]?.content.length ?? 0;
-		if (lastMessageId && lastMessageId !== previousLastMessageIdRef.current) {
+		if (lastMessageId && lastMessageId !== previousLastMessageIdRef.current && shouldFollowStreamRef.current) {
 			container.scrollTo({ top: container.scrollHeight, behavior: previousLastMessageIdRef.current ? 'smooth' : 'auto' });
 		} else if (
 			lastMessageId
 			&& lastMessageContentLength > previousLastContentLengthRef.current
-			&& container.scrollHeight - container.scrollTop - container.clientHeight < 240
+			&& shouldFollowStreamRef.current
 		) {
 			container.scrollTop = container.scrollHeight;
 		}
@@ -69,7 +70,12 @@ export default function ChatPanel(props: ChatPanelProps) {
 
 	const handleScroll = () => {
 		const container = scrollContainerRef.current;
-		if (!container || container.scrollTop > 80 || !props.hasOlderMessages || props.isLoadingOlder) return;
+		if (!container) return;
+
+		const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+		shouldFollowStreamRef.current = distanceFromBottom < 24;
+
+		if (container.scrollTop > 80 || !props.hasOlderMessages || props.isLoadingOlder) return;
 
 		previousScrollHeightRef.current = container.scrollHeight;
 		wasLoadingOlderRef.current = true;

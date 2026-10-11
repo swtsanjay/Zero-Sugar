@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from app.schemas.message import MessageCreate, MessageListResponse, MessageRegenerate, StartConversationResponse, NextMessageResponse, RegeneratedMessageResponse
 from app.database import engine
 from app.dependencies.auth import verify_token
-from app.services.chat import list_messages, stream_message, start_conversation, regenerate_message
+from app.services.chat import list_messages, stream_message, stream_regenerate_message, stream_start_conversation
 from app.core.responses import ApiResponse, success_response
 from fastapi.responses import StreamingResponse
 from typing import Annotated
@@ -17,12 +17,11 @@ router = APIRouter(
 CurrentUserId = Annotated[UUID, Depends(verify_token)]
 
 
-@router.post('/start-conversation', response_model=StartConversationResponse, status_code=201)
+@router.post('/start-conversation', status_code=201)
 def create_message(data: MessageCreate, user_id: CurrentUserId):
-    return start_conversation(
-        user_id=user_id,
-        content=data.content,
-        model=data.model,
+    return StreamingResponse(
+        stream_start_conversation(user_id=user_id, content=data.content, model=data.model),
+        media_type="text/event-stream",
     )
 
 @router.post('/{conversation_id}', response_model=NextMessageResponse, status_code=201)
@@ -36,11 +35,11 @@ def create_next_message(conversation_id: UUID, data: MessageCreate):
         media_type="text/event-stream",
     )
 
-@router.post('/regenerate/{message_id}', response_model=RegeneratedMessageResponse, status_code=201)
+@router.post('/regenerate/{message_id}', status_code=201)
 def regenerate_assistant_message(message_id: UUID, data: MessageRegenerate):
-    return regenerate_message(
-        message_id=message_id,
-        model=data.model,
+    return StreamingResponse(
+        stream_regenerate_message(message_id=message_id, model=data.model),
+        media_type="text/event-stream",
     )
 
 

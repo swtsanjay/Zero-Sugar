@@ -1,10 +1,9 @@
 import { Layout } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCreateMessage, useMessageListData, useRegenerateMessage, useStreamMessage } from '../../hooks/api/useMessage';
+import { useMessageListData, useStreamMessage, useStreamRegenerateMessage } from '../../hooks/api/useMessage';
 import { useAvailableModels } from '../../hooks/api/usePublic';
 import type { ChatMessage } from '../../types/message';
-import { parseApiError } from '../../utils/api-error';
 import ChatPanel from './components/ChatPanel';
 import ConversationSidebar from './components/ConversationSidebar';
 
@@ -18,6 +17,7 @@ export default function ChatPage() {
 	const [selectedModel, setSelectedModel] = useState('');
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [sendError, setSendError] = useState<string | null>(null);
+	const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
 	const optimisticMessageIds = useRef<{ userId: string; assistantId: string } | null>(null);
 	const pendingStreamRef = useRef<{ content: string; started: boolean } | null>(null);
 
@@ -26,57 +26,12 @@ export default function ChatPage() {
 		setSelectedModel((current) => current || models[0] || '');
 	}, [availableModels.data]);
 
-	const createMessage = useCreateMessage({
-		onSuccess: (response) => {
-			const optimisticIds = optimisticMessageIds.current;
-			setMessages((current) => [
-				...current.filter((message) => (
-					message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
-				)),
-				response.user_message,
-				response.assistant_message,
-			]);
-			optimisticMessageIds.current = null;
-
-			if (response.conversation) {
-				navigate(`/chat/${response.conversation.id}`, { replace: true });
-			}
-
-			setSendError(null);
-		},
-		onError: (error, variables) => {
-			const optimisticIds = optimisticMessageIds.current;
-			setMessages((current) => current.filter((message) => (
-				message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
-			)));
-			optimisticMessageIds.current = null;
-			setContent(variables.content);
-			setSendError(parseApiError(error).message);
-		},
-	});
-
 	useEffect(() => {
-		if (!conversationId) {
-			if (!optimisticMessageIds.current) setMessages([]);
-			return;
+		const latestMessage = messageHistory.messages[messageHistory.messages.length - 1];
+		if (latestMessage?.model && availableModels.data?.includes(latestMessage.model)) {
+			setSelectedModel(latestMessage.model);
 		}
-
-		if (messageHistory.isSuccess) {
-			setMessages(messageHistory.messages);
-		}
-	}, [conversationId, messageHistory.dataUpdatedAt]);
-
-	const regenerateMessage = useRegenerateMessage({
-		onSuccess: (response) => {
-			setMessages((current) => current.map((message) => (
-				message.id === response.assistant_message.id
-					? response.assistant_message
-					: message
-			)));
-			setSendError(null);
-		},
-		onError: (error) => setSendError(parseApiError(error).message),
-	});
+	}, [conversationId, messageHistory.dataUpdatedAt, availableModels.data]);
 
 	const streamedMessage = useStreamMessage({
 		onStart: (response) => {
@@ -90,6 +45,9 @@ export default function ChatPage() {
 				response.user_message,
 				response.assistant_message,
 			]);
+			if (response.conversation) {
+				navigate(`/chat/${response.conversation.id}`, { replace: true });
+			}
 		},
 		onContent: ({ message_id, content: chunk }) => {
 			setMessages((current) => current.map((message) => (
@@ -131,10 +89,50 @@ export default function ChatPage() {
 		},
 	});
 
+	const streamedRegeneration = useStreamRegenerateMessage({
+		onStart: ({ assistant_message }) => {
+			setMessages((current) => current.map((message) => (
+				message.id === assistant_message.id ? assistant_message : message
+			)));
+		},
+		onContent: ({ message_id, content: chunk }) => {
+			setMessages((current) => current.map((message) => (
+				message.id === message_id
+					? { ...message, content: message.content + chunk, status: 'streaming' }
+					: message
+			)));
+		},
+		onSuccess: ({ assistant_message }) => {
+			setMessages((current) => current.map((message) => (
+				message.id === assistant_message.id ? assistant_message : message
+			)));
+			setRegeneratingMessageId(null);
+			setSendError(null);
+		},
+		onError: (error) => {
+			setMessages((current) => current.map((message) => (
+				message.id === regeneratingMessageId ? { ...message, status: 'failed' } : message
+			)));
+			setRegeneratingMessageId(null);
+			setSendError(error.message);
+		},
+	});
+
+	useEffect(() => {
+		if (!conversationId) {
+			if (!optimisticMessageIds.current) setMessages([]);
+			return;
+		}
+
+		if (messageHistory.isSuccess && !streamedMessage.isStreaming && !streamedRegeneration.isStreaming) {
+			setMessages(messageHistory.messages);
+		}
+	}, [conversationId, messageHistory.dataUpdatedAt, streamedMessage.isStreaming, streamedRegeneration.isStreaming]);
+
 	const submitMessage = () => {
 		const trimmedContent = content.trim();
 
-		if (!trimmedContent || !selectedModel || createMessage.isPending || streamedMessage.isStreaming) return;
+		if (!trimmedContent || !selectedModel || streamedMessage.isStreaming || streamedRegeneration.isStreaming) return;
 
 		const now = new Date().toISOString();
 		const optimisticUserId = `optimistic-user-${crypto.randomUUID()}`;
@@ -177,23 +175,20 @@ export default function ChatPage() {
 		setContent('');
 		setSendError(null);
 
-		if (conversationId) {
-			pendingStreamRef.current = { content: trimmedContent, started: false };
-			void streamedMessage.start({
-				conversationId,
-				content: trimmedContent,
-				model: selectedModel,
-			});
-		} else {
-			createMessage.mutate({ content: trimmedContent, model: selectedModel, conversationId });
-		}
+		pendingStreamRef.current = { content: trimmedContent, started: false };
+		void streamedMessage.start({
+			conversationId,
+			content: trimmedContent,
+			model: selectedModel,
+		});
 	};
 
 	const regenerateAssistantMessage = (messageId: string) => {
-		if (!conversationId || !selectedModel || regenerateMessage.isPending || streamedMessage.isStreaming) return;
+		if (!conversationId || !selectedModel || streamedRegeneration.isStreaming || streamedMessage.isStreaming) return;
 
 		setSendError(null);
-		regenerateMessage.mutate({ messageId, conversationId, model: selectedModel });
+		setRegeneratingMessageId(messageId);
+		void streamedRegeneration.start({ messageId, conversationId, model: selectedModel });
 	};
 
 	const startNewChat = () => {
@@ -218,8 +213,8 @@ export default function ChatPage() {
 				models={availableModels.data ?? []}
 				isModelsLoading={availableModels.isLoading}
 				hasModelsError={availableModels.isError}
-				isSending={createMessage.isPending || streamedMessage.isStreaming}
-				regeneratingMessageId={regenerateMessage.isPending ? regenerateMessage.variables?.messageId ?? null : null}
+				isSending={streamedMessage.isStreaming || streamedRegeneration.isStreaming}
+				regeneratingMessageId={regeneratingMessageId}
 				isHistoryLoading={messageHistory.isLoading}
 				isLoadingOlder={messageHistory.isFetchingNextPage}
 				hasOlderMessages={Boolean(messageHistory.hasNextPage)}

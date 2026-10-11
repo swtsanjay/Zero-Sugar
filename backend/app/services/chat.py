@@ -90,6 +90,105 @@ def start_conversation(
             "assistant_message": assistant_message
         }
 
+
+def stream_start_conversation(
+    user_id: UUID,
+    content: str,
+    model: str,
+) -> Iterator[str]:
+    title_result = generate_chat(
+        model=model,
+        messages=[{
+            "role": "user",
+            "content": (
+                "Create a short title for the following conversation. "
+                "Return only the title, without Markdown, quotes, labels, "
+                "explanations, or emojis. Keep it under 80 characters.\n\n"
+                f"User message: {content}"
+            ),
+        }],
+    )
+    conversation_title = " ".join(title_result["content"].split()).strip()[:200]
+
+    with transaction_scope() as connection:
+        conversation = create_conversation(
+            user_id=user_id,
+            title=conversation_title or content[:200],
+            model=model,
+            connection=connection,
+        )
+        user_message = create_message(
+            conversation_id=conversation["id"],
+            role="user",
+            content=content,
+            model=model,
+            tokens=0,
+            status="completed",
+            connection=connection,
+        )
+        assistant_message = create_message(
+            conversation_id=conversation["id"],
+            role="assistant",
+            content="",
+            model=model,
+            tokens=0,
+            status="streaming",
+            connection=connection,
+        )
+
+    yield create_sse_event("start", {
+        "conversation": conversation,
+        "user_message": user_message,
+        "assistant_message": assistant_message,
+    })
+
+    complete_content = ""
+    prompt_tokens = 0
+    completion_tokens = 0
+    started_at = time.perf_counter()
+
+    try:
+        for chunk in stream_chat(model=model, messages=[{"role": "user", "content": content}]):
+            if chunk["type"] == "content":
+                complete_content += chunk["content"]
+                yield create_sse_event("content", {
+                    "message_id": assistant_message["id"],
+                    "content": chunk["content"],
+                })
+            elif chunk["type"] == "done":
+                prompt_tokens = chunk.get("prompt_tokens", 0)
+                completion_tokens = chunk.get("completion_tokens", 0)
+
+        with transaction_scope() as connection:
+            updated_user_message = change_message(
+                id=user_message["id"], tokens=prompt_tokens, connection=connection
+            )
+            updated_assistant_message = change_message(
+                id=assistant_message["id"],
+                content=complete_content,
+                model=model,
+                tokens=completion_tokens,
+                execution_time=time.perf_counter() - started_at,
+                status="completed",
+                connection=connection,
+            )
+
+        yield create_sse_event("done", {
+            "conversation": conversation,
+            "user_message": updated_user_message,
+            "assistant_message": updated_assistant_message,
+        })
+    except GeneratorExit:
+        change_message(id=assistant_message["id"], content=complete_content, status="cancelled")
+        raise
+    except Exception:
+        change_message(id=assistant_message["id"], content=complete_content, status="failed")
+        yield create_sse_event("error", {
+            "message_id": assistant_message["id"],
+            "message": "Assistant response generation failed.",
+        })
+        raise
+
 def regenerate_message(
     message_id: UUID,
     model: str
@@ -130,6 +229,70 @@ def regenerate_message(
     return {
         "assistant_message": assistant_message
     }
+
+
+def stream_regenerate_message(message_id: UUID, model: str) -> Iterator[str]:
+    message = get_by_id(message_id)
+    if message is None:
+        raise ValueError("Message not found")
+    if message["role"] != "assistant":
+        raise ValueError("Only assistant messages can be regenerated")
+
+    previous_content = message["content"]
+    streaming_message = change_message(
+        id=message_id,
+        content="",
+        model=model,
+        tokens=0,
+        execution_time=0,
+        status="streaming",
+    )
+    yield create_sse_event("start", {"assistant_message": streaming_message})
+
+    complete_content = ""
+    completion_tokens = 0
+    started_at = time.perf_counter()
+    regeneration_context = [
+        {"role": "assistant", "content": previous_content},
+        {
+            "role": "user",
+            "content": (
+                "Regenerate your previous response with a fresh, clear answer. "
+                "Do not mention the previous response or this instruction."
+            ),
+        },
+    ]
+
+    try:
+        for chunk in stream_chat(model=model, messages=regeneration_context):
+            if chunk["type"] == "content":
+                complete_content += chunk["content"]
+                yield create_sse_event("content", {
+                    "message_id": message_id,
+                    "content": chunk["content"],
+                })
+            elif chunk["type"] == "done":
+                completion_tokens = chunk.get("completion_tokens", 0)
+
+        updated_message = change_message(
+            id=message_id,
+            content=complete_content,
+            model=model,
+            tokens=completion_tokens,
+            execution_time=time.perf_counter() - started_at,
+            status="completed",
+        )
+        yield create_sse_event("done", {"assistant_message": updated_message})
+    except GeneratorExit:
+        change_message(id=message_id, content=complete_content, status="cancelled")
+        raise
+    except Exception:
+        change_message(id=message_id, content=complete_content, status="failed")
+        yield create_sse_event("error", {
+            "message_id": message_id,
+            "message": "Assistant response regeneration failed.",
+        })
+        raise
     
 
 def next_message(

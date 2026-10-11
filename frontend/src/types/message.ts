@@ -37,12 +37,13 @@ export type CreateMessageResponse = {
 }
 
 export type StreamMessageInput = {
-	conversationId: string
+	conversationId?: string | null
 	content: string
 	model: string
 }
 
 export type StreamMessageStart = {
+	conversation?: Conversation
 	user_message: ChatMessage
 	assistant_message: ChatMessage
 }
@@ -53,6 +54,12 @@ export type StreamMessageContent = {
 }
 
 export type StreamMessageDone = StreamMessageStart
+
+export type StreamRegenerateStart = {
+	assistant_message: ChatMessage
+}
+
+export type StreamRegenerateDone = StreamRegenerateStart
 
 export type RegenerateMessageInput = {
 	messageId: string

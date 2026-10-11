@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
-import { createMessage, getMessages, regenerateMessage, streamMessage } from '../../api/message.api';
+import { createMessage, getMessages, regenerateMessage, streamMessage, streamRegenerateMessage } from '../../api/message.api';
 import type { ApiResponse } from '../../types/api';
-import type { ChatMessage, CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse, StreamMessageContent, StreamMessageDone, StreamMessageInput, StreamMessageStart } from '../../types/message';
+import type { ChatMessage, CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse, StreamMessageContent, StreamMessageDone, StreamMessageInput, StreamMessageStart, StreamRegenerateDone, StreamRegenerateStart } from '../../types/message';
 import API_ENDPOINTS from '../../constants/api-endpoints';
 
 export function useMessageListData(conversationId: string | null) {
@@ -98,9 +98,15 @@ export function useStreamMessage(options: StreamMessageOptions = {}) {
 			}, controller.signal);
 
 			optionsRef.current.onSuccess?.(result);
-			await queryClient.invalidateQueries({
-				queryKey: [API_ENDPOINTS.MESSAGE, input.conversationId],
-			});
+			if (result.conversation) {
+				await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.CONVERSATION] });
+			}
+			const conversationId = result.conversation?.id ?? input.conversationId;
+			if (conversationId) {
+				await queryClient.invalidateQueries({
+					queryKey: [API_ENDPOINTS.MESSAGE, conversationId],
+				});
+			}
 		} catch (error) {
 			if (error instanceof Error) optionsRef.current.onError?.(error);
 			else optionsRef.current.onError?.(new Error('Response generation failed'));
@@ -115,6 +121,48 @@ export function useStreamMessage(options: StreamMessageOptions = {}) {
 	}, []);
 
 	return { start, stop, isStreaming };
+}
+
+type StreamRegenerateOptions = {
+	onStart?: (data: StreamRegenerateStart) => void
+	onContent?: (data: StreamMessageContent) => void
+	onSuccess?: (data: StreamRegenerateDone) => void
+	onError?: (error: Error) => void
+}
+
+export function useStreamRegenerateMessage(options: StreamRegenerateOptions = {}) {
+	const queryClient = useQueryClient();
+	const optionsRef = useRef(options);
+	const controllerRef = useRef<AbortController | null>(null);
+	const [isStreaming, setIsStreaming] = useState(false);
+	optionsRef.current = options;
+
+	const start = useCallback(async (input: RegenerateMessageInput) => {
+		if (controllerRef.current) return;
+		const controller = new AbortController();
+		controllerRef.current = controller;
+		setIsStreaming(true);
+
+		try {
+			const result = await streamRegenerateMessage(input, {
+				onStart: (data) => optionsRef.current.onStart?.(data),
+				onContent: (data) => optionsRef.current.onContent?.(data),
+			}, controller.signal);
+			optionsRef.current.onSuccess?.(result);
+			await queryClient.invalidateQueries({
+				queryKey: [API_ENDPOINTS.MESSAGE, input.conversationId],
+			});
+		} catch (error) {
+			optionsRef.current.onError?.(
+				error instanceof Error ? error : new Error('Response regeneration failed'),
+			);
+		} finally {
+			controllerRef.current = null;
+			setIsStreaming(false);
+		}
+	}, [queryClient]);
+
+	return { start, isStreaming };
 }
 
 type RegenerateMessageOptions = Omit<

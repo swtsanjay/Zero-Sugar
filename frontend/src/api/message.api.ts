@@ -1,6 +1,6 @@
 import API_ENDPOINTS from '../constants/api-endpoints';
 import type { ApiResponse } from '../types/api';
-import type { CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse, StreamMessageContent, StreamMessageDone, StreamMessageInput, StreamMessageStart } from '../types/message';
+import type { CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse, StreamMessageContent, StreamMessageDone, StreamMessageInput, StreamMessageStart, StreamRegenerateDone, StreamRegenerateStart } from '../types/message';
 import { apiClient } from './client';
 import { getAccessToken } from '../utils/token-manager';
 
@@ -43,21 +43,22 @@ export async function regenerateMessage(input: RegenerateMessageInput): Promise<
 	return response.data;
 }
 
-export async function streamMessage(
-	input: StreamMessageInput,
-	handlers: StreamMessageHandlers,
+async function consumeMessageStream<StartData, DoneData>(
+	endpoint: string,
+	body: object,
+	handlers: { onStart: (data: StartData) => void; onContent: (data: StreamMessageContent) => void },
 	signal?: AbortSignal,
-): Promise<StreamMessageDone> {
+): Promise<DoneData> {
 	const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 	const token = getAccessToken();
-	const response = await fetch(`${baseUrl}${API_ENDPOINTS.MESSAGE}/${input.conversationId}`, {
+	const response = await fetch(`${baseUrl}${endpoint}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Accept: 'text/event-stream',
 			...(token ? { Authorization: `Bearer ${token}` } : {}),
 		},
-		body: JSON.stringify({ content: input.content, model: input.model }),
+		body: JSON.stringify(body),
 		signal,
 	});
 
@@ -72,7 +73,7 @@ export async function streamMessage(
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
 	let buffer = '';
-	let completedMessage: StreamMessageDone | null = null;
+	let completedMessage: DoneData | null = null;
 
 	const processEvent = (rawEvent: string) => {
 		const lines = rawEvent.split(/\r?\n/);
@@ -85,9 +86,9 @@ export async function streamMessage(
 		if (!event || !dataText) return;
 		const data: unknown = JSON.parse(dataText);
 
-		if (event === 'start') handlers.onStart(data as StreamMessageStart);
+		if (event === 'start') handlers.onStart(data as StartData);
 		if (event === 'content') handlers.onContent(data as StreamMessageContent);
-		if (event === 'done') completedMessage = data as StreamMessageDone;
+		if (event === 'done') completedMessage = data as DoneData;
 		if (event === 'error') {
 			const errorData = data as { message?: string };
 			throw new Error(errorData.message ?? 'Response generation failed');
@@ -107,4 +108,34 @@ export async function streamMessage(
 	if (buffer.trim()) processEvent(buffer);
 	if (!completedMessage) throw new Error('The response stream ended before completion');
 	return completedMessage;
+}
+
+export function streamMessage(
+	input: StreamMessageInput,
+	handlers: StreamMessageHandlers,
+	signal?: AbortSignal,
+): Promise<StreamMessageDone> {
+	const endpoint = input.conversationId
+		? `${API_ENDPOINTS.MESSAGE}/${input.conversationId}`
+		: API_ENDPOINTS.START_CONVERSATION;
+
+	return consumeMessageStream<StreamMessageStart, StreamMessageDone>(
+		endpoint,
+		{ content: input.content, model: input.model },
+		handlers,
+		signal,
+	);
+}
+
+export function streamRegenerateMessage(
+	input: RegenerateMessageInput,
+	handlers: { onStart: (data: StreamRegenerateStart) => void; onContent: (data: StreamMessageContent) => void },
+	signal?: AbortSignal,
+): Promise<StreamRegenerateDone> {
+	return consumeMessageStream<StreamRegenerateStart, StreamRegenerateDone>(
+		`${API_ENDPOINTS.REGENERATE_MESSAGE}/${input.messageId}`,
+		{ model: input.model },
+		handlers,
+		signal,
+	);
 }
