@@ -1,77 +1,41 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { UseMutationOptions } from '@tanstack/react-query';
 import { createMessage, getMessages, regenerateMessage } from '../../api/message.api';
 import type { ApiResponse } from '../../types/api';
 import type { ChatMessage, CreateMessageInput, CreateMessageResponse, MessageList, RegenerateMessageInput, RegenerateMessageResponse } from '../../types/message';
 import API_ENDPOINTS from '../../constants/api-endpoints';
 
-type MessageListQuery = {
-	page: number
-	limit: number
-}
-
-type MessageListData = {
-	data: Array<ChatMessage & { key: string }>
-	qData: MessageListQuery & { total: number }
-	setQData: React.Dispatch<React.SetStateAction<MessageListQuery>>
-}
-
-type MessageListOptions = Omit<
-	UseQueryOptions<ApiResponse<MessageList>, Error, MessageListData>,
-	'queryKey' | 'queryFn' | 'select' | 'initialData'
->
-
-const initialMessageResponse: ApiResponse<MessageList> = {
-	success: true,
-	message: '',
-	data: {
-		items: [],
-		pagination: {
-			page: 1,
-			limit: 100,
-			total: 0,
-			total_pages: 0,
-			has_next: false,
-			has_previous: false,
-		},
-	},
-	error: null,
-};
-
-export function useMessageListData(
-	conversationId: string | null,
-	qData: MessageListQuery = { page: 1, limit: 100 },
-	options: MessageListOptions = {},
-) {
-	const [queryParams, setQueryParams] = useState<MessageListQuery>({ ...qData });
-
-	const query = useQuery<ApiResponse<MessageList>, Error, MessageListData>({
-		queryKey: [API_ENDPOINTS.MESSAGE, conversationId, { ...queryParams, total: null }],
-		queryFn: () => getMessages(conversationId as string, queryParams),
-		select: (response) => ({
-			data: (response.data?.items ?? []).map((message) => ({
-				key: message.id,
-				...message,
-			})),
-			qData: {
-				...queryParams,
-				total: response.data?.pagination.total ?? 0,
-			},
-			setQData: setQueryParams,
+export function useMessageListData(conversationId: string | null) {
+	const query = useInfiniteQuery<ApiResponse<MessageList>, Error>({
+		queryKey: [API_ENDPOINTS.MESSAGE, conversationId, { limit: 10 }],
+		queryFn: ({ pageParam }) => getMessages(conversationId as string, {
+			page: Number(pageParam),
+			limit: 10,
 		}),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) => {
+			const pagination = lastPage.data?.pagination;
+			return pagination?.has_next ? pagination.page + 1 : undefined;
+		},
 		enabled: Boolean(conversationId),
 		refetchOnWindowFocus: false,
-		initialDataUpdatedAt: 0,
-		initialData: initialMessageResponse,
-		...options,
 	});
+
+	const messages = useMemo(() => {
+		const messageMap = new Map<string, ChatMessage>();
+		query.data?.pages.forEach((page) => {
+			page.data?.items.forEach((message) => messageMap.set(message.id, message));
+		});
+
+		return Array.from(messageMap.values()).sort(
+			(first, second) => first.sequence_number - second.sequence_number,
+		);
+	}, [query.data]);
 
 	return {
 		...query,
-		refetchWithQuery: (params: Partial<MessageListQuery>) => {
-			setQueryParams((current) => ({ ...current, ...params }));
-		},
+		messages,
 	};
 }
 

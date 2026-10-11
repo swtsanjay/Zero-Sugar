@@ -21,7 +21,7 @@ def create_message(data: MessageCreate, user_id: CurrentUserId):
     return start_conversation(
         user_id=user_id,
         content=data.content,
-        model="qwen3:14b",
+        model=data.model,
     )
 
 @router.post('/{conversation_id}', response_model=NextMessageResponse, status_code=201)
@@ -29,7 +29,7 @@ def create_next_message(conversation_id: UUID, data: MessageCreate):
     return next_message(
         conversation_id=conversation_id,
         content=data.content,
-        model="qwen3:14b",
+        model=data.model,
     )
 
 @router.post('/regenerate/{message_id}', response_model=RegeneratedMessageResponse, status_code=201)

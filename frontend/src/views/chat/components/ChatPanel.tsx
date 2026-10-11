@@ -1,5 +1,6 @@
 import { MessageOutlined } from '@ant-design/icons';
 import { Alert, Button, Layout, Spin, Typography } from 'antd';
+import { useLayoutEffect, useRef } from 'react';
 import type { ChatMessage } from '../../../types/message';
 import AssistantMessageBubble from './AssistantMessageBubble';
 import MessageComposer from './MessageComposer';
@@ -12,24 +13,63 @@ type ChatPanelProps = {
 	conversationId: string | null
 	messages: ChatMessage[]
 	content: string
+	model: string
+	models: string[]
+	isModelsLoading: boolean
+	hasModelsError: boolean
 	isSending: boolean
 	regeneratingMessageId: string | null
 	isHistoryLoading: boolean
+	isLoadingOlder: boolean
+	hasOlderMessages: boolean
 	hasHistoryError: boolean
 	sendError: string | null
 	onContentChange: (value: string) => void
+	onModelChange: (value: string) => void
 	onSend: () => void
 	onRegenerate: (messageId: string) => void
 	onRetryHistory: () => void
+	onLoadOlder: () => void
 	onDismissSendError: () => void
 }
 
 export default function ChatPanel(props: ChatPanelProps) {
 	const { conversationId, messages } = props;
+	const scrollContainerRef = useRef<HTMLElement>(null);
+	const previousLastMessageIdRef = useRef<string | null>(null);
+	const previousScrollHeightRef = useRef<number | null>(null);
+	const wasLoadingOlderRef = useRef(false);
+
+	useLayoutEffect(() => {
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		if (wasLoadingOlderRef.current && !props.isLoadingOlder && previousScrollHeightRef.current !== null) {
+			container.scrollTop += container.scrollHeight - previousScrollHeightRef.current;
+			previousScrollHeightRef.current = null;
+		}
+
+		const lastMessageId = messages[messages.length - 1]?.id ?? null;
+		if (lastMessageId && lastMessageId !== previousLastMessageIdRef.current) {
+			container.scrollTo({ top: container.scrollHeight, behavior: previousLastMessageIdRef.current ? 'smooth' : 'auto' });
+		}
+
+		previousLastMessageIdRef.current = lastMessageId;
+		wasLoadingOlderRef.current = props.isLoadingOlder;
+	}, [messages, props.isLoadingOlder]);
+
+	const handleScroll = () => {
+		const container = scrollContainerRef.current;
+		if (!container || container.scrollTop > 80 || !props.hasOlderMessages || props.isLoadingOlder) return;
+
+		previousScrollHeightRef.current = container.scrollHeight;
+		wasLoadingOlderRef.current = true;
+		props.onLoadOlder();
+	};
 
 	return (
 		<Content className="chat-content flex h-full min-h-0 flex-col overflow-hidden">
-			<main className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
+			<main ref={scrollContainerRef} onScroll={handleScroll} className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
 				{props.isHistoryLoading && conversationId && messages.length === 0 ? (
 					<div className="grid flex-1 place-items-center"><Spin /></div>
 				) : props.hasHistoryError && conversationId ? (
@@ -42,6 +82,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 					</>
 				) : (
 					<div className="mx-auto flex w-full max-w-3xl flex-col gap-4" data-conversation-id={conversationId ?? undefined}>
+						{props.isLoadingOlder ? <div className="flex justify-center py-2"><Spin size="small" /></div> : null}
 						{messages.map((message) => message.role === 'user' ? (
 							<UserMessageBubble key={message.id} message={message} />
 						) : (
@@ -50,6 +91,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 								message={message}
 								isRegenerating={props.regeneratingMessageId === message.id}
 								disableRegenerate={props.regeneratingMessageId !== null || props.isSending}
+								isOptimistic={message.id.startsWith('optimistic-assistant-')}
 								onRegenerate={props.onRegenerate}
 							/>
 						))}
@@ -59,9 +101,14 @@ export default function ChatPanel(props: ChatPanelProps) {
 
 			<MessageComposer
 				value={props.content}
+				model={props.model}
+				models={props.models}
+				isModelsLoading={props.isModelsLoading}
+				hasModelsError={props.hasModelsError}
 				isSending={props.isSending}
 				error={props.sendError}
 				onChange={props.onContentChange}
+				onModelChange={props.onModelChange}
 				onSend={props.onSend}
 				onDismissError={props.onDismissSendError}
 			/>

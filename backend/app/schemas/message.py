@@ -7,6 +7,7 @@ from app.schemas.conversation import PaginationResponse
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=500)
+    model: str = Field(min_length=1, max_length=100)
 
     @field_validator("content", mode="before")
     @classmethod

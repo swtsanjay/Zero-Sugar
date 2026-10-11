@@ -1,5 +1,6 @@
 const API_ENDPOINTS = {
 	HEALTH: '/database-health',
+	MODELS: '/public/get-allmodels',
 	CREATE_ACCOUNT: '/user/create-account',
 	LOGIN: '/user/login',
 	REFRESH: '/user/refresh',

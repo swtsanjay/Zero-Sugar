@@ -10,6 +10,7 @@ export async function createMessage(input: CreateMessageInput): Promise<CreateMe
 
 	const response = await apiClient.post<CreateMessageResponse>(endpoint, {
 		content: input.content,
+		model: input.model,
 	});
 
 	return response.data;

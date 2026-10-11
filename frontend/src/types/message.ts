@@ -2,6 +2,7 @@ import type { Pagination } from './conversation';
 
 export type CreateMessageInput = {
 	content: string
+	model: string
 	conversationId?: string | null
 }
 

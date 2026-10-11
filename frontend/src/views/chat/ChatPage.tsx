@@ -1,7 +1,8 @@
 import { Layout } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCreateMessage, useMessageListData, useRegenerateMessage } from '../../hooks/api/useMessage';
+import { useAvailableModels } from '../../hooks/api/usePublic';
 import type { ChatMessage } from '../../types/message';
 import { parseApiError } from '../../utils/api-error';
 import ChatPanel from './components/ChatPanel';
@@ -12,27 +13,57 @@ export default function ChatPage() {
 	const { conversationId: routeConversationId } = useParams<{ conversationId: string }>();
 	const conversationId = routeConversationId ?? null;
 	const messageHistory = useMessageListData(conversationId);
+	const availableModels = useAvailableModels();
 	const [content, setContent] = useState('');
+	const [selectedModel, setSelectedModel] = useState('');
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [sendError, setSendError] = useState<string | null>(null);
+	const optimisticMessageIds = useRef<{ userId: string; assistantId: string } | null>(null);
 
 	useEffect(() => {
-		setMessages(conversationId ? (messageHistory.data?.data ?? []) : []);
-	}, [conversationId, messageHistory.data?.data]);
+		const models = availableModels.data ?? [];
+		setSelectedModel((current) => current || models[0] || '');
+	}, [availableModels.data]);
 
 	const createMessage = useCreateMessage({
 		onSuccess: (response) => {
-			setMessages((current) => [...current, response.user_message, response.assistant_message]);
+			const optimisticIds = optimisticMessageIds.current;
+			setMessages((current) => [
+				...current.filter((message) => (
+					message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
+				)),
+				response.user_message,
+				response.assistant_message,
+			]);
+			optimisticMessageIds.current = null;
 
 			if (response.conversation) {
 				navigate(`/chat/${response.conversation.id}`, { replace: true });
 			}
 
-			setContent('');
 			setSendError(null);
 		},
-		onError: (error) => setSendError(parseApiError(error).message),
+		onError: (error, variables) => {
+			const optimisticIds = optimisticMessageIds.current;
+			setMessages((current) => current.filter((message) => (
+				message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
+			)));
+			optimisticMessageIds.current = null;
+			setContent(variables.content);
+			setSendError(parseApiError(error).message);
+		},
 	});
+
+	useEffect(() => {
+		if (!conversationId) {
+			if (!optimisticMessageIds.current) setMessages([]);
+			return;
+		}
+
+		if (messageHistory.isSuccess) {
+			setMessages(messageHistory.messages);
+		}
+	}, [conversationId, messageHistory.dataUpdatedAt]);
 
 	const regenerateMessage = useRegenerateMessage({
 		onSuccess: (response) => {
@@ -49,10 +80,51 @@ export default function ChatPage() {
 	const submitMessage = () => {
 		const trimmedContent = content.trim();
 
-		if (!trimmedContent || createMessage.isPending) return;
+		if (!trimmedContent || !selectedModel || createMessage.isPending) return;
 
+		const now = new Date().toISOString();
+		const optimisticUserId = `optimistic-user-${crypto.randomUUID()}`;
+		const optimisticAssistantId = `optimistic-assistant-${crypto.randomUUID()}`;
+		const nextSequenceNumber = (messages[messages.length - 1]?.sequence_number ?? 0) + 1;
+		optimisticMessageIds.current = {
+			userId: optimisticUserId,
+			assistantId: optimisticAssistantId,
+		};
+
+		setMessages((current) => [
+			...current,
+			{
+				id: optimisticUserId,
+				conversation_id: conversationId ?? '',
+				role: 'user',
+				content: trimmedContent,
+				sequence_number: nextSequenceNumber,
+				execution_time: 0,
+				status: 'pending',
+				model: selectedModel,
+				prompt_tokens: null,
+				completion_tokens: null,
+				created_at: now,
+				updated_at: now,
+			},
+			{
+				id: optimisticAssistantId,
+				conversation_id: conversationId ?? '',
+				role: 'assistant',
+				content: '',
+				sequence_number: nextSequenceNumber + 1,
+				execution_time: 0,
+				status: 'pending',
+				model: selectedModel,
+				prompt_tokens: null,
+				completion_tokens: null,
+				created_at: now,
+				updated_at: now,
+			},
+		]);
+		setContent('');
 		setSendError(null);
-		createMessage.mutate({ content: trimmedContent, conversationId });
+		createMessage.mutate({ content: trimmedContent, model: selectedModel, conversationId });
 	};
 
 	const regenerateAssistantMessage = (messageId: string) => {
@@ -80,15 +152,23 @@ export default function ChatPage() {
 				conversationId={conversationId}
 				messages={messages}
 				content={content}
+				model={selectedModel}
+				models={availableModels.data ?? []}
+				isModelsLoading={availableModels.isLoading}
+				hasModelsError={availableModels.isError}
 				isSending={createMessage.isPending}
 				regeneratingMessageId={regenerateMessage.isPending ? regenerateMessage.variables?.messageId ?? null : null}
-				isHistoryLoading={messageHistory.isFetching}
+				isHistoryLoading={messageHistory.isLoading}
+				isLoadingOlder={messageHistory.isFetchingNextPage}
+				hasOlderMessages={Boolean(messageHistory.hasNextPage)}
 				hasHistoryError={messageHistory.isError}
 				sendError={sendError}
 				onContentChange={setContent}
+				onModelChange={setSelectedModel}
 				onSend={submitMessage}
 				onRegenerate={regenerateAssistantMessage}
 				onRetryHistory={() => messageHistory.refetch()}
+				onLoadOlder={() => { void messageHistory.fetchNextPage(); }}
 				onDismissSendError={() => setSendError(null)}
 			/>
 		</Layout>

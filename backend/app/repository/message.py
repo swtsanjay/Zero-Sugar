@@ -109,7 +109,7 @@ def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection
         query = (
             select(MessageTable)
             .where(MessageTable.deleted_at.is_(None))
-            .order_by(MessageTable.sequence_number.asc())
+            .order_by(MessageTable.sequence_number.desc())
         )
     
         if conversation_id is not None:
