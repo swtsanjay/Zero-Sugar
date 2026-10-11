@@ -74,6 +74,7 @@ type StreamMessageOptions = {
 	onStart?: (data: StreamMessageStart) => void
 	onContent?: (data: StreamMessageContent) => void
 	onSuccess?: (data: StreamMessageDone) => void
+	onCancelled?: () => void
 	onError?: (error: Error) => void
 }
 
@@ -108,7 +109,8 @@ export function useStreamMessage(options: StreamMessageOptions = {}) {
 				});
 			}
 		} catch (error) {
-			if (error instanceof Error) optionsRef.current.onError?.(error);
+			if (controller.signal.aborted) optionsRef.current.onCancelled?.();
+			else if (error instanceof Error) optionsRef.current.onError?.(error);
 			else optionsRef.current.onError?.(new Error('Response generation failed'));
 		} finally {
 			controllerRef.current = null;
@@ -127,6 +129,7 @@ type StreamRegenerateOptions = {
 	onStart?: (data: StreamRegenerateStart) => void
 	onContent?: (data: StreamMessageContent) => void
 	onSuccess?: (data: StreamRegenerateDone) => void
+	onCancelled?: () => void
 	onError?: (error: Error) => void
 }
 
@@ -153,16 +156,23 @@ export function useStreamRegenerateMessage(options: StreamRegenerateOptions = {}
 				queryKey: [API_ENDPOINTS.MESSAGE, input.conversationId],
 			});
 		} catch (error) {
-			optionsRef.current.onError?.(
-				error instanceof Error ? error : new Error('Response regeneration failed'),
-			);
+			if (controller.signal.aborted) optionsRef.current.onCancelled?.();
+			else {
+				optionsRef.current.onError?.(
+					error instanceof Error ? error : new Error('Response regeneration failed'),
+				);
+			}
 		} finally {
 			controllerRef.current = null;
 			setIsStreaming(false);
 		}
 	}, [queryClient]);
 
-	return { start, isStreaming };
+	const stop = useCallback(() => {
+		controllerRef.current?.abort();
+	}, []);
+
+	return { start, stop, isStreaming };
 }
 
 type RegenerateMessageOptions = Omit<

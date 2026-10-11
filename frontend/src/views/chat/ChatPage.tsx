@@ -66,6 +66,27 @@ export default function ChatPage() {
 			pendingStreamRef.current = null;
 			setSendError(null);
 		},
+		onCancelled: () => {
+			const pendingStream = pendingStreamRef.current;
+			const optimisticIds = optimisticMessageIds.current;
+
+			if (!pendingStream?.started) {
+				setMessages((current) => current.filter((message) => (
+					message.id !== optimisticIds?.userId && message.id !== optimisticIds?.assistantId
+				)));
+				if (pendingStream) setContent(pendingStream.content);
+			} else {
+				setMessages((current) => current.map((message) => (
+					message.role === 'assistant' && message.status === 'streaming'
+						? { ...message, status: 'cancelled' }
+						: message
+				)));
+			}
+
+			optimisticMessageIds.current = null;
+			pendingStreamRef.current = null;
+			setSendError(null);
+		},
 		onError: (error) => {
 			const pendingStream = pendingStreamRef.current;
 			const optimisticIds = optimisticMessageIds.current;
@@ -105,6 +126,13 @@ export default function ChatPage() {
 		onSuccess: ({ assistant_message }) => {
 			setMessages((current) => current.map((message) => (
 				message.id === assistant_message.id ? assistant_message : message
+			)));
+			setRegeneratingMessageId(null);
+			setSendError(null);
+		},
+		onCancelled: () => {
+			setMessages((current) => current.map((message) => (
+				message.id === regeneratingMessageId ? { ...message, status: 'cancelled' } : message
 			)));
 			setRegeneratingMessageId(null);
 			setSendError(null);
@@ -191,6 +219,11 @@ export default function ChatPage() {
 		void streamedRegeneration.start({ messageId, conversationId, model: selectedModel });
 	};
 
+	const stopGeneration = () => {
+		if (streamedMessage.isStreaming) streamedMessage.stop();
+		if (streamedRegeneration.isStreaming) streamedRegeneration.stop();
+	};
+
 	const startNewChat = () => {
 		setMessages([]);
 		setContent('');
@@ -223,6 +256,7 @@ export default function ChatPage() {
 				onContentChange={setContent}
 				onModelChange={setSelectedModel}
 				onSend={submitMessage}
+				onStop={stopGeneration}
 				onRegenerate={regenerateAssistantMessage}
 				onRetryHistory={() => messageHistory.refetch()}
 				onLoadOlder={() => { void messageHistory.fetchNextPage(); }}

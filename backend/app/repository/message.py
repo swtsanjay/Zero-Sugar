@@ -104,7 +104,7 @@ def get_by_id(message_id: UUID = None, connection: Optional[Connection] = None):
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)
 
-def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection: Optional[Connection] = None):
+def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, all: bool = False, connection: Optional[Connection] = None):
     try:
         query = (
             select(MessageTable)
@@ -119,6 +119,7 @@ def get(conversation_id: UUID = None, page: int = 1, limit: int = 20, connection
             query,
             {"page": page, "limit": limit},
             connection,
+            all = all
         )
     except SQLAlchemyError as e:
         raise SQLAlchemyError(e)

@@ -27,6 +27,7 @@ type ChatPanelProps = {
 	onContentChange: (value: string) => void
 	onModelChange: (value: string) => void
 	onSend: () => void
+	onStop: () => void
 	onRegenerate: (messageId: string) => void
 	onRetryHistory: () => void
 	onLoadOlder: () => void
@@ -125,6 +126,7 @@ export default function ChatPanel(props: ChatPanelProps) {
 				onChange={props.onContentChange}
 				onModelChange={props.onModelChange}
 				onSend={props.onSend}
+				onStop={props.onStop}
 				onDismissError={props.onDismissSendError}
 			/>
 		</Content>
