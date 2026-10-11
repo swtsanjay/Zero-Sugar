@@ -3,7 +3,7 @@ import type { ChatMessage } from '../../../types/message';
 
 export default function UserMessageBubble({ message }: { message: ChatMessage }) {
 	const isOptimistic = message.id.startsWith('optimistic-user-');
-	const promptTokens = Number(message.prompt_tokens ?? 0);
+	const promptTokens = Number(message.tokens ?? 0);
 
 	return (
 		<div className="ml-auto max-w-[85%]">

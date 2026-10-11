@@ -112,7 +112,7 @@ def regenerate_message(
         id=message_id,
         content=ass_res["content"],
         model=model,
-        token=ass_res["completion_tokens"],
+        tokens=ass_res["completion_tokens"],
         execution_time=ass_res["execution_time"]
     )
 
@@ -126,15 +126,21 @@ def next_message(
     content: str,
     model: str,
 ):
+    old_messages=get_messages(conversation_id=conversation_id, page=1, limit=20)["items"]
+    messages = [
+        {
+            "role": message["role"],
+            "content": message["content"],
+        }
+        for message in reversed(old_messages)
+    ]
+    messages.append({ "role": "user", "content": content })
+
     ass_res = generate_chat(
-            model="qwen3:14b",
-            messages=[
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ]
-        )
+        model=model,
+        messages=messages
+    )
+
     with transaction_scope() as connection:
 
         user_message = create_message(
