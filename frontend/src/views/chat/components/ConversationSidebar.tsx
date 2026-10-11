@@ -17,13 +17,13 @@ export default function ConversationSidebar({ activeConversationId, onNewChat, o
 	const queryData = conversations.data?.qData;
 
 	return (
-		<Sider breakpoint="md" collapsedWidth="0" width={260} className="chat-sidebar border-r p-4">
+		<Sider breakpoint="md" collapsedWidth="0" width={260} className="chat-sidebar h-full overflow-hidden border-r p-4">
 			<Button block icon={<PlusOutlined />} size="large" onClick={onNewChat}>New chat</Button>
 			<div className="mt-8 flex items-center gap-2 px-2 pb-3 text-slate-400">
 				<MessageOutlined />
 				<span>Conversations</span>
 			</div>
-			<div className="flex max-h-[calc(100vh-9rem)] flex-col gap-1 overflow-y-auto">
+			<div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
 				{conversations.isLoading ? (
 					<div className="flex justify-center py-8"><Spin size="small" /></div>
 				) : conversations.isError ? (

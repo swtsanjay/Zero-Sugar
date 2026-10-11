@@ -14,7 +14,7 @@ type MessageComposerProps = {
 
 export default function MessageComposer({ value, isSending, error, onChange, onSend, onDismissError }: MessageComposerProps) {
 	return (
-		<footer className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+		<footer className="message-composer z-10 mx-auto w-full max-w-3xl shrink-0 p-4 sm:p-6">
 			{error ? <Alert className="mb-3" type="error" showIcon message={error} closable onClose={onDismissError} /> : null}
 			<Input
 				value={value}

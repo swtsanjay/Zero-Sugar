@@ -51,7 +51,7 @@ export default function ChatPage() {
 	};
 
 	return (
-		<Layout className="chat-layout min-h-[calc(100vh-4rem)]">
+		<Layout className="chat-layout h-[calc(100dvh-4rem)] min-h-0 overflow-hidden">
 			<ConversationSidebar
 				activeConversationId={conversationId}
 				onNewChat={startNewChat}

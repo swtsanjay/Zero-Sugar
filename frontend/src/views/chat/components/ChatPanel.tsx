@@ -26,8 +26,8 @@ export default function ChatPanel(props: ChatPanelProps) {
 	const { conversationId, messages } = props;
 
 	return (
-		<Content className="chat-content flex min-h-[calc(100vh-4rem)] flex-col">
-			<main className={`flex flex-1 flex-col px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
+		<Content className="chat-content flex h-full min-h-0 flex-col overflow-hidden">
+			<main className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-8 sm:px-6 ${messages.length ? '' : 'items-center justify-center text-center'}`}>
 				{props.isHistoryLoading && conversationId && messages.length === 0 ? (
 					<div className="grid flex-1 place-items-center"><Spin /></div>
 				) : props.hasHistoryError && conversationId ? (
