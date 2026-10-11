@@ -3,7 +3,7 @@ import type { ChatMessage } from '../../../types/message';
 
 export default function UserMessageBubble({ message }: { message: ChatMessage }) {
 	const isOptimistic = message.id.startsWith('optimistic-user-');
-	const promptTokens = Number(message.tokens ?? 0);
+	const tokens = Number(message.tokens ?? 0);
 
 	return (
 		<div className="ml-auto max-w-[85%]">
@@ -12,7 +12,7 @@ export default function UserMessageBubble({ message }: { message: ChatMessage })
 			</div>
 			<div className="mt-2 flex justify-end px-1 text-xs text-slate-500">
 				<NumberOutlined className="mr-1" />
-				{isOptimistic ? 'Calculating tokens…' : `${promptTokens} prompt tokens`}
+				{isOptimistic ? 'Calculating tokens…' : `${tokens} tokens`}
 			</div>
 		</div>
 	);

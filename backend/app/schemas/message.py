@@ -21,6 +21,10 @@ class MessageCreate(BaseModel):
         return value
 
 
+class MessageRegenerate(BaseModel):
+    model: str = Field(min_length=1, max_length=100)
+
+
 
 class Message(BaseModel):
     id: UUID

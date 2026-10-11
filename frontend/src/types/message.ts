@@ -39,6 +39,7 @@ export type CreateMessageResponse = {
 export type RegenerateMessageInput = {
 	messageId: string
 	conversationId: string
+	model: string
 }
 
 export type RegenerateMessageResponse = {

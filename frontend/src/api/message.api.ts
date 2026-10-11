@@ -31,6 +31,7 @@ export async function getMessages(
 export async function regenerateMessage(input: RegenerateMessageInput): Promise<RegenerateMessageResponse> {
 	const response = await apiClient.post<RegenerateMessageResponse>(
 		`${API_ENDPOINTS.REGENERATE_MESSAGE}/${input.messageId}`,
+		{ model: input.model },
 	);
 
 	return response.data;

@@ -19,7 +19,7 @@ export default function AssistantMessageBubble({ message, isRegenerating, disabl
 	const formattedExecutionTime = Number.isFinite(executionTime)
 		? `${executionTime.toFixed(2)} s`
 		: '—';
-	const completionTokens = Number(message.tokens ?? 0);
+	const tokens = Number(message.tokens ?? 0);
 
 	return (
 		<div className="mr-auto max-w-[90%]">
@@ -43,7 +43,7 @@ export default function AssistantMessageBubble({ message, isRegenerating, disabl
 				</Text>
 				<Text type="secondary" className="text-xs">
 					<NumberOutlined className="mr-1" />
-					{completionTokens} completion tokens
+					{tokens} tokens
 				</Text>
 				<Tooltip title="Regenerate response">
 					<Button

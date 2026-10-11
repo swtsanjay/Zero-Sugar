@@ -126,10 +126,10 @@ export default function ChatPage() {
 	};
 
 	const regenerateAssistantMessage = (messageId: string) => {
-		if (!conversationId || regenerateMessage.isPending) return;
+		if (!conversationId || !selectedModel || regenerateMessage.isPending) return;
 
 		setSendError(null);
-		regenerateMessage.mutate({ messageId, conversationId });
+		regenerateMessage.mutate({ messageId, conversationId, model: selectedModel });
 	};
 
 	const startNewChat = () => {

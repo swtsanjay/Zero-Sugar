@@ -36,7 +36,7 @@ def start_conversation(
     conversation_title = " ".join(ass_title_res["content"].split()).strip()[:200]
 
     ass_res = generate_chat(
-        model="qwen3:14b",
+        model=model,
         messages=[
             {
                 "role": "user",
@@ -92,7 +92,7 @@ def regenerate_message(
         raise ValueError("Only assistant messages can be regenerated")
     
     ass_res = generate_chat(
-        model="qwen3:14b",
+        model=model,
         messages=[
             {
                 "role": "assistant",
